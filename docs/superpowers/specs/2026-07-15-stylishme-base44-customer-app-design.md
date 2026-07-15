@@ -1,12 +1,12 @@
-# NamiStyle Base44 Customer App Design
+# StylishMe Base44 Customer App Design
 
 ## Purpose
 
-NamiStyle is a premium, customer-facing fashion marketplace for Namibia. It gives shoppers one trusted place to discover local fashion, see clear prices and real variant availability, choose the right fit, understand delivery before checkout, and track an order.
+StylishMe is a premium, customer-facing fashion marketplace for Namibia. It gives shoppers one trusted place to discover local fashion, see clear prices and real variant availability, choose the right fit, understand delivery before checkout, and track an order.
 
 The first release is intentionally limited to the customer experience. Designer and administrator portals, a separate Supabase platform, live payment providers, social feeds, messaging, livestreaming, rentals, and second-hand marketplace functionality are deferred.
 
-The working name `NamiStyle` must be represented as a single app-level brand value so it can be changed later without editing individual pages.
+The app name `StylishMe` must be represented as a single app-level brand value so it can be changed later without editing individual pages.
 
 ## Product Positioning
 
