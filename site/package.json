@@ -1,0 +1,48 @@
+{
+  "name": "site-creator-vinext-starter",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "test": "node --import tsx --import ./tests/dom-setup.mjs --test --test-concurrency=1 tests/auth-hardening.test.mjs tests/customer-story-domain.test.mjs tests/customer-story-api.test.mjs tests/customer-story-actions.test.mjs tests/customer-story-view.test.mjs tests/outfit-commerce.test.mjs tests/outfit-story-behavior.test.mjs tests/shop-filter.test.mjs tests/rendered-html.test.mjs tests/stylishme-interactions.test.mjs tests/try-on-domain.test.mjs tests/try-on-view.test.mjs tests/try-on-api.test.mjs tests/pwa-metadata.test.mjs tests/pwa-service-worker.test.mjs tests/unified-app.test.mjs tests/demo-experience.test.mjs tests/admin-privacy.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .worktrees",
+    "icons:pwa": "node scripts/generate-pwa-icons.mjs",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "next": "16.2.6",
+    "openai": "^6.48.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@tailwindcss/postcss": "4.2.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "jsdom": "^29.1.1",
+    "react-server-dom-webpack": "19.2.6",
+    "sharp": "^0.34.5",
+    "tailwindcss": "4.2.1",
+    "tsx": "^4.23.1",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "type": "module"
+}

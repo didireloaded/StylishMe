@@ -1,0 +1,34 @@
+{
+  "id": "/",
+  "name": "StylishMe Namibia",
+  "short_name": "StylishMe",
+  "description": "Discover Namibian designers, shop real stock, find your fit, and track every order.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b1218",
+  "theme_color": "#0b1218",
+  "orientation": "portrait-primary",
+  "lang": "en-NA",
+  "categories": ["shopping", "fashion", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/stylishme-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/stylishme-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/stylishme-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
