@@ -152,6 +152,25 @@ export async function GET(request: Request) {
   const signupStarts = countEvent("signup_started");
   const signups = countEvent("customer_joined") + countEvent("seller_joined");
   const checkoutStarts = countEvent("checkout_started");
+  const productSignals = new Map<string, { views: number; saves: number; cartAdds: number }>();
+  events.forEach(event => {
+    if (!event.targetId || !["product_viewed", "wishlist_saved", "cart_added"].includes(event.eventType)) return;
+    const signal = productSignals.get(event.targetId) ?? { views: 0, saves: 0, cartAdds: 0 };
+    if (event.eventType === "product_viewed") signal.views += 1;
+    if (event.eventType === "wishlist_saved") signal.saves += 1;
+    if (event.eventType === "cart_added") signal.cartAdds += 1;
+    productSignals.set(event.targetId, signal);
+  });
+  const topProducts = [...productSignals.entries()].flatMap(([id, signal]) => {
+    const product = productById.get(id);
+    return product ? [{ id, name: product.name, seller: product.designer, ...signal, interest: signal.views + signal.saves * 2 + signal.cartAdds * 3 }] : [];
+  }).sort((a, b) => b.interest - a.interest).slice(0, 8);
+  const cityCounts = new Map<string, number>();
+  profiles.forEach(profile => {
+    const city = text(profile.city, "Not selected") || "Not selected";
+    cityCounts.set(city, (cityCounts.get(city) ?? 0) + 1);
+  });
+  const activityByCity = [...cityCounts.entries()].map(([city, customers]) => ({ city, customers })).sort((a, b) => b.customers - a.customers);
 
   return Response.json({
     generatedAt: new Date().toISOString(),
@@ -185,6 +204,8 @@ export async function GET(request: Request) {
     },
     analytics: {
       daily,
+      topProducts,
+      activityByCity,
       customerStories: {
         published: countEvent("customer_story_published"),
         views: countEvent("customer_story_viewed"),
