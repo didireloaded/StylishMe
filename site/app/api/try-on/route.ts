@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getStylishMeUser } from "../../stylishme-auth";
 import { buildProduct } from "../../product-catalog";
 import {
   buildTryOnPrompt,
@@ -273,7 +273,7 @@ async function consumeTryOnQuota(email: string, now: Date) {
 }
 
 const productionServices: TryOnServices = {
-  authenticate: getChatGPTUser,
+  authenticate: getStylishMeUser,
   fetchReference: fetchCatalogueReference,
   moderate: moderateImage,
   generate: generateImage,

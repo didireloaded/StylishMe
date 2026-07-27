@@ -1,13 +1,13 @@
 import { env } from "cloudflare:workers";
 
 import { recordActivity } from "../../../../activity";
-import { getChatGPTUser } from "../../../../chatgpt-auth";
+import { getStylishMeUser } from "../../../../stylishme-auth";
 import { ensureCustomerStoryTables, storyActorHash } from "../../../../customer-story-storage";
 
 const reasons = new Set(["inappropriate", "misleading", "privacy", "spam", "other"]);
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await getChatGPTUser();
+  const user = await getStylishMeUser();
   if (!user) return Response.json({ error: "Sign in to report this outfit" }, { status: 401 });
   await ensureCustomerStoryTables();
   const { id } = await context.params;

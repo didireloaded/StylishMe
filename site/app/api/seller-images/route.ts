@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { getDb } from "../../../db";
 import { sellerState } from "../../../db/schema";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getStylishMeUser } from "../../stylishme-auth";
 import { requireAccountRole } from "../../account-role";
 
 const allowed = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -17,7 +17,7 @@ function hasValidSignature(bytes: Uint8Array, type: string) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getChatGPTUser();
+    const user = await getStylishMeUser();
     if (!user) return Response.json({ error: "Sign in securely to add product photos" }, { status: 401 });
     if (!await requireAccountRole(user.email, "seller")) return Response.json({ error: "Seller access is required" }, { status: 403 });
     const [seller] = await getDb().select().from(sellerState).where(eq(sellerState.ownerEmail, user.email)).limit(1);

@@ -36,6 +36,13 @@
       "when": 1785181816986,
       "tag": "0004_flat_champions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1785193887185,
+      "tag": "0005_open_inertia",
+      "breakpoints": true
     }
   ]
 }

@@ -64,7 +64,7 @@ const tours = {
 } satisfies Record<DemoRole, Array<{ eyebrow: string; title: string; copy: string; image: string }>>;
 
 const joinUrl = (role: DemoRole) =>
-  `/signin-with-chatgpt?return_to=${encodeURIComponent(`/?join=${role}`)}`;
+  `/login?returnTo=${encodeURIComponent(`/?join=${role}`)}`;
 
 export default function DemoExperience() {
   const [role, setRole] = useState<DemoRole | null>(null);

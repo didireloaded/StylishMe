@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 
 import { getDb } from "../db";
 import { activityEvents } from "../db/schema";
-import { getChatGPTUser } from "./chatgpt-auth";
+import { getStylishMeUser } from "./stylishme-auth";
 
 export const ACTIVITY_TYPES = [
   "customer_joined",
@@ -99,7 +99,7 @@ export async function recordActivity(
   if (!validEvents.has(eventType)) return;
   await ensureActivityTable();
 
-  const user = await getChatGPTUser();
+  const user = await getStylishMeUser();
   const forwarded = request.headers.get("cf-connecting-ip")
     ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     ?? "anonymous";

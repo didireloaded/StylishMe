@@ -18,7 +18,7 @@ function memoryStorage(entries) {
   };
 }
 
-test("logout clears account-private state while preserving guest shopping state", () => {
+test("logout clears all account-private state", () => {
   assert.equal(typeof sessionReset.clearPrivateAccountState, "function");
   const storage = memoryStorage({
     "stylishme-state:person@example.com": "private",
@@ -46,24 +46,46 @@ test("logout uses replacement navigation, progress, and private cache clearing",
   assert.match(source, /\/login\?reason=logged-out/);
 });
 
-test("login gives explicit logout feedback, guest browsing, and a safe return path", async () => {
+test("login gives explicit logout feedback and never offers guest access", async () => {
   assert.equal(typeof sessionReset.safeInternalReturnTo, "function");
   assert.equal(sessionReset.safeInternalReturnTo("/wishlist?from=look"), "/wishlist?from=look");
   assert.equal(sessionReset.safeInternalReturnTo("https://evil.example"), "/");
   assert.equal(sessionReset.safeInternalReturnTo("//evil.example"), "/");
-  const source = await read("app/login/page.tsx");
-  assert.match(source, /You.ve been signed out/);
-  assert.match(source, /Continue shopping as guest/);
-  assert.match(source, /chatGPTSignInPath\(returnTo\)/);
+  const [source, form] = await Promise.all([read("app/login/page.tsx"), read("app/AuthForm.tsx")]);
+  assert.match(form, /You.ve been signed out/);
+  assert.doesNotMatch(source + form, /Continue shopping as guest/);
+  assert.doesNotMatch(source + form, /ChatGPT/i);
+  assert.match(source, /AuthForm/);
 });
 
-test("private customer and seller URLs check the server session", async () => {
+test("the storefront is protected on the server before customer UI renders", async () => {
+  const source = await read("app/page.tsx");
+  assert.match(source, /redirect\(`\/login\?returnTo=/);
+  assert.doesNotMatch(source, /SessionResetGate/);
+});
+
+test("StylishMe account signup requires a profile photo and secure password", async () => {
+  const [form, signup, auth] = await Promise.all([
+    read("app/AuthForm.tsx"), read("app/api/auth/signup/route.ts"), read("app/stylishme-auth.ts"),
+  ]);
+  assert.match(form, /Profile photo/);
+  assert.match(form, /Google/);
+  assert.match(form, /Apple/);
+  assert.doesNotMatch(form, /ChatGPT/i);
+  assert.match(signup, /avatar instanceof File/);
+  assert.match(signup, /createPasswordHash/);
+  assert.match(auth, /PBKDF2/);
+  assert.match(auth, /HttpOnly/);
+  assert.match(auth, /SameSite=Lax/);
+});
+
+test("private customer and seller URLs check the StylishMe server session", async () => {
   const [profile, orders, seller] = await Promise.all([
     read("app/profile/page.tsx"), read("app/orders/page.tsx"), read("app/seller/page.tsx"),
   ]);
-  assert.match(profile, /requireChatGPTUser\("\/profile"\)/);
-  assert.match(orders, /requireChatGPTUser\("\/orders"\)/);
-  assert.match(seller, /requireChatGPTUser\("\/seller"\)/);
+  assert.match(profile, /requireStylishMeUser\("\/profile"\)/);
+  assert.match(orders, /requireStylishMeUser\("\/orders"\)/);
+  assert.match(seller, /requireStylishMeUser\("\/seller"\)/);
   assert.match(seller, /accountRole/);
 });
 

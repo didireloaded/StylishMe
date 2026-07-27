@@ -109,7 +109,7 @@ test("seller APIs use authenticated ownership and approval-gated public catalogu
   ]);
 
   for (const route of [sellerState, sellerImages]) {
-    assert.match(route, /getChatGPTUser/);
+    assert.match(route, /getStylishMeUser/);
     assert.match(route, /sellerState\.ownerEmail/);
     assert.doesNotMatch(route, /x-seller-invite/);
   }

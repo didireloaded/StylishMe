@@ -32,7 +32,7 @@ export function safeInternalReturnTo(value: string | null | undefined, fallback 
   try {
     const url = new URL(value, "https://stylishme.local");
     if (url.origin !== "https://stylishme.local") return fallback;
-    if (["/signout-with-chatgpt", "/callback"].includes(url.pathname)) return fallback;
+    if (["/login", "/api/auth/logout"].includes(url.pathname)) return fallback;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;
