@@ -16,7 +16,7 @@ const colourTokens: Record<string, string[]> = {
 export function createCatalogueLook<T extends CataloguePiece>(products: T[], brief: StyleBrief): T[] {
   const budget = brief.budget === "Flexible" ? Number.POSITIVE_INFINITY : Number(brief.budget.replace(/\D/g, "")) || 1500;
   const categoryOrder = /wedding|dinner|occasion|sunday/i.test(brief.occasion)
-    ? ["Women", "Traditional", "Men", "Shoes", "Bags", "Accessories"]
+    ? ["Women", "Traditional", "Men", "Clothing", "Shoes", "Bags", "Accessories"]
     : /office|work/i.test(brief.occasion)
       ? ["Clothing", "Women", "Men", "Shoes", "Bags", "Accessories"]
       : ["Clothing", "Women", "Men", "Shoes", "Accessories", "Bags"];

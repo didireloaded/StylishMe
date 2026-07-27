@@ -119,7 +119,7 @@ test("wires outfit-only stories into a calm editorial home", async () => {
     read("app/outfit-story-behavior.ts"),
     read("app/globals.css"),
   ]);
-  assert.match(app, /OUTFIT_STORIES\.map/);
+  assert.match(app, /editorialStories\.map/);
   assert.match(app, /Outfit of the day/i);
   assert.doesNotMatch(app, /\["New In", "Near You", "Designers", "Shoes", "Made Local", "Drops"\]/);
   assert.match(viewer, /Save Outfit/);
