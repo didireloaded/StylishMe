@@ -1,0 +1,92 @@
+{
+  "_StylishMeApp-DF-rz-jv.js": {
+    "file": "assets/StylishMeApp-DF-rz-jv.js",
+    "name": "StylishMeApp",
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "_framework-CXnKph_e.js": {
+    "file": "assets/framework-CXnKph_e.js",
+    "name": "framework",
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js"
+    ]
+  },
+  "_rolldown-runtime-S-ySWqyJ.js": {
+    "file": "assets/rolldown-runtime-S-ySWqyJ.js",
+    "name": "rolldown-runtime"
+  },
+  "app/AppEntry.tsx": {
+    "file": "assets/AppEntry-BrbD621T.js",
+    "name": "AppEntry",
+    "src": "app/AppEntry.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_StylishMeApp-DF-rz-jv.js",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "app/DemoExperience.tsx": {
+    "file": "assets/DemoExperience-CTWQkF0p.js",
+    "name": "DemoExperience",
+    "src": "app/DemoExperience.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_StylishMeApp-DF-rz-jv.js",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "app/PwaRegistration.tsx": {
+    "file": "assets/PwaRegistration-ihmX7ITV.js",
+    "name": "PwaRegistration",
+    "src": "app/PwaRegistration.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "app/SessionResetGate.tsx": {
+    "file": "assets/SessionResetGate-Cs0jlYjs.js",
+    "name": "SessionResetGate",
+    "src": "app/SessionResetGate.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "node_modules/vinext/dist/shims/layout-segment-context.js": {
+    "file": "assets/layout-segment-context-BTFrxcJ3.js",
+    "name": "layout-segment-context",
+    "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "virtual:vinext-app-browser-entry",
+      "_framework-CXnKph_e.js"
+    ]
+  },
+  "virtual:vinext-app-browser-entry": {
+    "file": "assets/index-B9ypFGZ7.js",
+    "name": "index",
+    "src": "virtual:vinext-app-browser-entry",
+    "isEntry": true,
+    "imports": [
+      "_rolldown-runtime-S-ySWqyJ.js",
+      "_framework-CXnKph_e.js"
+    ],
+    "dynamicImports": [
+      "node_modules/vinext/dist/shims/layout-segment-context.js",
+      "app/AppEntry.tsx",
+      "app/PwaRegistration.tsx",
+      "virtual:vinext-app-browser-entry",
+      "app/DemoExperience.tsx",
+      "app/SessionResetGate.tsx"
+    ]
+  }
+}

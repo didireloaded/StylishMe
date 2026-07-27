@@ -1,0 +1,40 @@
+{
+  "_drizzle-orm-DLyyecfE.js": {
+    "file": "assets/drizzle-orm-DLyyecfE.js",
+    "name": "drizzle-orm"
+  },
+  "_schema-4CgItBP4.js": {
+    "file": "assets/schema-4CgItBP4.js",
+    "name": "schema",
+    "imports": [
+      "_drizzle-orm-DLyyecfE.js"
+    ]
+  },
+  "node_modules/drizzle-orm/index.js": {
+    "file": "assets/drizzle-orm-BiunADc8.js",
+    "name": "drizzle-orm",
+    "src": "node_modules/drizzle-orm/index.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_drizzle-orm-DLyyecfE.js"
+    ]
+  },
+  "virtual:cloudflare/worker-entry": {
+    "file": "index.js",
+    "name": "index",
+    "src": "virtual:cloudflare/worker-entry",
+    "isEntry": true,
+    "imports": [
+      "_schema-4CgItBP4.js",
+      "_drizzle-orm-DLyyecfE.js"
+    ],
+    "dynamicImports": [
+      "virtual:cloudflare/worker-entry",
+      "_drizzle-orm-DLyyecfE.js",
+      "_schema-4CgItBP4.js"
+    ],
+    "css": [
+      "assets/index-aSH4XYzH.css"
+    ]
+  }
+}
