@@ -4,6 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 
 import OutfitsView from "./OutfitsView";
 import OutfitStoryViewer from "./OutfitStoryViewer";
@@ -206,6 +207,7 @@ export default function StylishMeApp({
   const [eligibleStoryItems, setEligibleStoryItems] = useState<EligibleStoryItem[]>([]);
   const [customerStoriesError, setCustomerStoriesError] = useState("");
   const [trendingProductIds, setTrendingProductIds] = useState<string[]>([]);
+  const [newProductIds, setNewProductIds] = useState<string[]>([]);
   const [featuredDesigner, setFeaturedDesigner] = useState("");
   const [storyComposerOpen, setStoryComposerOpen] = useState(false);
   const [activeCustomerStoryId, setActiveCustomerStoryId] = useState<string | null>(null);
@@ -270,6 +272,7 @@ export default function StylishMeApp({
   const trendingProducts = (trendingProductIds.length
     ? trendingProductIds.map(id => productById.get(id)).filter((product): product is Product => Boolean(product))
     : products.filter(product => product.stock.some(quantity => quantity > 0)).slice(4, 12)).slice(0, 4);
+  const newArrivalProducts = (newProductIds.length ? newProductIds.map(id => productById.get(id)).filter((product): product is Product => Boolean(product)) : products).filter(product => product.stock.some(quantity => quantity > 0)).slice(0, 4);
 
   const refreshCustomerStories = async () => {
     try {
@@ -363,7 +366,7 @@ export default function StylishMeApp({
 
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(""), 2200); return () => window.clearTimeout(timer); }, [toast]);
   useEffect(() => { void refreshCustomerStories(); }, []);
-  useEffect(() => { void fetch("/api/discovery").then(response => response.ok ? response.json() : null).then(body => { setTrendingProductIds(Array.isArray(body?.trendingProductIds) ? body.trendingProductIds : []); setFeaturedDesigner(typeof body?.featuredDesigner === "string" ? body.featuredDesigner : ""); }).catch(() => undefined); }, []);
+  useEffect(() => { void fetch("/api/discovery").then(response => response.ok ? response.json() : null).then(body => { setTrendingProductIds(Array.isArray(body?.trendingProductIds) ? body.trendingProductIds : []); setNewProductIds(Array.isArray(body?.newProductIds) ? body.newProductIds : []); setFeaturedDesigner(typeof body?.featuredDesigner === "string" ? body.featuredDesigner : ""); }).catch(() => undefined); }, []);
   useEffect(() => {
     const productId = new URLSearchParams(window.location.search).get("product");
     const linkedProduct = productId ? productById.get(productId) : null;
@@ -685,7 +688,7 @@ export default function StylishMeApp({
     <section aria-labelledby="new-arrivals-title">
       <div className="section-title"><h2 id="new-arrivals-title">New arrivals</h2><button onClick={() => navigate("shop")}>View all</button></div>
       <div className="compact-product-row">
-        {products.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}
+        {newArrivalProducts.map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}
       </div>
     </section>
     <section className="home-look-edit" aria-labelledby="shop-look-title">
@@ -897,7 +900,7 @@ export default function StylishMeApp({
         inert={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen}
         aria-hidden={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen ? true : undefined}
       >
-        <div className="screen-content">{content}{view === "profile" && <a className="become-seller-banner" href="/?join=seller" aria-label="Become a seller"><span><small>CREATE YOUR STORE</small><strong>Become a seller</strong><b>Open your fashion business on StylishMe</b></span><i>→</i></a>}</div>
+        <div className="screen-content">{content}{view === "profile" && <Link className="become-seller-banner" href="/?join=seller" aria-label="Become a seller"><span><small>CREATE YOUR STORE</small><strong>Become a seller</strong><b>Open your fashion business on StylishMe</b></span><i>→</i></Link>}</div>
         {!["product", "checkout", "confirmation"].includes(view) && (
           <nav className="bottom-nav">
             {mainTabs.map(([label, target, icon]) => {

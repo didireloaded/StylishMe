@@ -18,6 +18,7 @@ export async function GET() {
       const weight = event.eventType === "cart_added" ? 4 : event.eventType === "wishlist_saved" ? 2 : event.eventType === "product_viewed" ? 1 : 0;
       if (weight && event.targetId) scores.set(event.targetId, (scores.get(event.targetId) ?? 0) + weight);
     }
+    const newProductIds = recentEvents.filter(event => event.eventType === "product_submitted" && event.targetType === "product" && event.targetId).map(event => event.targetId as string).filter((id, index, list) => list.indexOf(id) === index).slice(0, 8);
     const catalogue = new Map(Array.from({ length: 41 }, (_, index) => buildProduct(index)).map(product => [product.id, product]));
     const designerOrders = new Map<string, number>();
     for (const row of customers) {
@@ -36,8 +37,8 @@ export async function GET() {
       }
     }
     const featuredDesigner = [...designerOrders.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    return Response.json({ trendingProductIds: [...scores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id), featuredDesigner }, { headers: { "cache-control": "public, max-age=300", "x-content-type-options": "nosniff" } });
+    return Response.json({ trendingProductIds: [...scores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id), newProductIds, featuredDesigner }, { headers: { "cache-control": "public, max-age=300", "x-content-type-options": "nosniff" } });
   } catch {
-    return Response.json({ trendingProductIds: [] }, { headers: { "cache-control": "public, max-age=60" } });
+    return Response.json({ trendingProductIds: [], newProductIds: [], featuredDesigner: null }, { headers: { "cache-control": "public, max-age=60" } });
   }
 }

@@ -1,0 +1,19 @@
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated caches
+node_modules/
+.next/
+.vinext/
+.wrangler/
+coverage/
+*.log
+
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
