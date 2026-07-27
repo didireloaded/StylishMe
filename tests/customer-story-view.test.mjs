@@ -13,7 +13,7 @@ test("Home integrates verified buyer stories without adding comments or another 
   ]);
   assert.match(app, /Add yours/);
   assert.match(app, /customerStories\.filter/);
-  assert.match(composer, /Choose purchased pieces/);
+  assert.match(composer, /Tag the purchased piece and store/);
   assert.match(composer, /Preview & publish/);
   assert.match(viewer, /Verified purchase/);
   assert.match(viewer, /Shop the pieces/);
@@ -25,7 +25,7 @@ test("Home integrates verified buyer stories without adding comments or another 
 
 test("customer story upload and browsing failures stay independent from editorial stories", async () => {
   const app = await read("app/StylishMeApp.tsx");
-  assert.match(app, /OUTFIT_STORIES\.map/);
+  assert.match(app, /editorialStories\.map/);
   assert.match(app, /Outfit stories are resting/);
   assert.match(app, /refreshCustomerStories/);
 });

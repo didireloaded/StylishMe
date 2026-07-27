@@ -2,9 +2,9 @@
 
 /* External catalogue photography is intentionally rendered at its native crop. */
 /* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-html-link-for-pages */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 
 import OutfitsView from "./OutfitsView";
 import OutfitStoryViewer from "./OutfitStoryViewer";
@@ -900,7 +900,7 @@ export default function StylishMeApp({
         inert={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen}
         aria-hidden={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen ? true : undefined}
       >
-        <div className="screen-content">{content}{view === "profile" && <Link className="become-seller-banner" href="/?join=seller" aria-label="Become a seller"><span><small>CREATE YOUR STORE</small><strong>Become a seller</strong><b>Open your fashion business on StylishMe</b></span><i>→</i></Link>}</div>
+        <div className="screen-content">{content}{view === "profile" && <a className="become-seller-banner" href="/?join=seller" aria-label="Become a seller"><span><small>CREATE YOUR STORE</small><strong>Become a seller</strong><b>Open your fashion business on StylishMe</b></span><i>→</i></a>}</div>
         {!["product", "checkout", "confirmation"].includes(view) && (
           <nav className="bottom-nav">
             {mainTabs.map(([label, target, icon]) => {
