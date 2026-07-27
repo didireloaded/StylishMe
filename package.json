@@ -6,6 +6,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "test:style-me": "node --import tsx --test tests/style-me-domain.test.mjs",
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",
