@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1784128179701,
+      "tag": "0000_natural_dragon_lord",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784816306896,
+      "tag": "0001_even_johnny_blaze",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784826580839,
+      "tag": "0002_tidy_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784828849510,
+      "tag": "0003_reset_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785181816986,
+      "tag": "0004_flat_champions",
+      "breakpoints": true
+    }
+  ]
+}
