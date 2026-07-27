@@ -85,3 +85,16 @@ export async function inspectAndReencodeStoryImage(input: Uint8Array | Buffer, c
   if (ratio < 0.55 || ratio > 1) throw new Error("Choose a portrait outfit photo");
   return { ...image, contentType: contentType as "image/jpeg" | "image/png" | "image/webp" };
 }
+
+export async function inspectProfileImage(input: Uint8Array | Buffer, contentType: string) {
+  if (!allowed.has(contentType)) throw new Error("Choose a JPG, PNG or WebP image");
+  const source = new Uint8Array(input);
+  const image = contentType === "image/jpeg" ? sanitizeJpeg(source) : contentType === "image/png" ? sanitizePng(source) : sanitizeWebp(source);
+  if (image.width * image.height > 20_000_000) throw new Error("Choose a profile photo under 20 megapixels");
+  if (image.width < 256 || image.height < 256) throw new Error("Choose a profile photo at least 256 × 256 pixels");
+  return {
+    ...image,
+    contentType: contentType as "image/jpeg" | "image/png" | "image/webp",
+    extension: contentType === "image/jpeg" ? "jpg" : contentType === "image/png" ? "png" : "webp",
+  };
+}

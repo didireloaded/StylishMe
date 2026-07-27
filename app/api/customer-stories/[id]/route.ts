@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getStylishMeUser } from "../../../stylishme-auth";
 import { ensureCustomerStoryTables } from "../../../customer-story-storage";
 
 export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
-  const user = await getChatGPTUser();
+  const user = await getStylishMeUser();
   if (!user) return Response.json({ error: "Sign in to remove your outfit" }, { status: 401 });
   await ensureCustomerStoryTables();
   const { id } = await context.params;

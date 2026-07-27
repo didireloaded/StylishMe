@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { requireChatGPTUser } from "../chatgpt-auth";
+import { requireStylishMeUser } from "../stylishme-auth";
 
 export const dynamic = "force-dynamic";
 export default async function ProfileRoute() {
-  await requireChatGPTUser("/profile");
+  await requireStylishMeUser("/profile");
   redirect("/?view=profile");
 }

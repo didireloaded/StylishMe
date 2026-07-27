@@ -83,7 +83,7 @@ export default function TryOnView({
   onContinueShopping,
   initialIntent = "try-on",
   isSignedIn = true,
-  signInUrl = "/signin-with-chatgpt?return_to=/",
+  signInUrl = "/login?returnTo=/",
 }: Props) {
   const validInitialIds = useMemo(() => {
     const ids = initialProductIds.filter((id) => products.some((product) => product.id === id));
@@ -274,7 +274,7 @@ export default function TryOnView({
     <h1 id="try-on-sign-in-title">Sign in before adding your photo.</h1>
     <p className="try-on-lead">A secure account keeps this personal preview connected only to you and helps protect the feature from misuse.</p>
     <a className="gradient-button full try-on-sign-in" href={signInUrl}>Sign in securely</a>
-    <button className="outline-button full" onClick={onContinueShopping}>Continue shopping as guest</button>
+    <button className="outline-button full" onClick={onContinueShopping}>Return to sign in</button>
   </section>;
 
   if (step === "consent") return <section className="try-on-view" aria-labelledby="try-on-consent-title">

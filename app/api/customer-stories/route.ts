@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { customerState } from "../../../db/schema";
 import { recordActivity } from "../../activity";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getStylishMeUser } from "../../stylishme-auth";
 import { cleanStoryText, eligibleStoryItems, isRingActive } from "../../customer-story-domain";
 import { inspectAndReencodeStoryImage } from "../../customer-story-image";
 import { buildProduct } from "../../product-catalog";
@@ -55,7 +55,7 @@ async function publicStories(userEmail?: string) {
 
 export async function GET() {
   try {
-    const user = await getChatGPTUser();
+    const user = await getStylishMeUser();
     const stories = await publicStories(user?.email);
     let eligibleItems: Array<{ orderId: string; productId: string }> = [];
     if (user) {
@@ -88,7 +88,7 @@ async function imageAllowed(bytes: Uint8Array) {
 
 export async function POST(request: Request) {
   try {
-    const user = await getChatGPTUser();
+    const user = await getStylishMeUser();
     if (!user) return Response.json({ error: "Sign in to share an outfit" }, { status: 401 });
     const form = await request.formData();
     const image = form.get("image");

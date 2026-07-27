@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { sellerState } from "../../../db/schema";
 import { recordActivity } from "../../activity";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getStylishMeUser } from "../../stylishme-auth";
 import { listingQuality } from "../../seller-domain";
 import { requireAccountRole } from "../../account-role";
 
@@ -81,7 +81,7 @@ function cleanState(value: unknown, email: string) {
 
 export async function GET() {
   try {
-    const user = await getChatGPTUser();
+  const user = await getStylishMeUser();
     if (!user) return Response.json({ error: "Sign in securely to open seller tools" }, { status: 401 });
     if (!await requireAccountRole(user.email, "seller")) return Response.json({ error: "Seller access is required" }, { status: 403 });
     const [row] = await getDb().select().from(sellerState).where(eq(sellerState.ownerEmail, user.email)).limit(1);
@@ -93,7 +93,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await getChatGPTUser();
+    const user = await getStylishMeUser();
     if (!user) return Response.json({ error: "Sign in securely to manage a store" }, { status: 401 });
     if (!await requireAccountRole(user.email, "seller")) return Response.json({ error: "Seller access is required" }, { status: 403 });
     const size = Number(request.headers.get("content-length") ?? "0");

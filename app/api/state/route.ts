@@ -2,14 +2,14 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { customerState } from "../../../db/schema";
 import { recordActivity, type ActivityType } from "../../activity";
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getStylishMeUser } from "../../stylishme-auth";
 
 const safeJson = (value: string, fallback: unknown) => {
   try { return JSON.parse(value); } catch { return fallback; }
 };
 
 async function identity() {
-  const user = await getChatGPTUser();
+  const user = await getStylishMeUser();
   return user?.email ?? null;
 }
 

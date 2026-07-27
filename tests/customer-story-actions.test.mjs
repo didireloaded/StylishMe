@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(path, root), "utf8");
 
 test("likes are authenticated, unique and toggle through the backend", async () => {
   const route = await read("app/api/customer-stories/[id]/like/route.ts");
-  assert.match(route, /getChatGPTUser/);
+  assert.match(route, /getStylishMeUser/);
   assert.match(route, /storyActorHash/);
   assert.match(route, /DELETE FROM customer_outfit_story_likes/);
   assert.match(route, /INSERT INTO customer_outfit_story_likes/);

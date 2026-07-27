@@ -7,15 +7,15 @@ import StorefrontView from "./StorefrontView";
 import StylishMeApp from "./StylishMeApp";
 import type { AccountRole } from "./unified-domain";
 
-type User = { name: string; email: string } | null;
-type EntryStage = "welcome" | "highlights" | "auth" | "role";
+type User = { name: string; email: string; avatarUrl: string };
+type EntryStage = "welcome" | "highlights" | "role";
 
 export default function AppEntry({ user }: { user: User }) {
   const [stage, setStage] = useState<EntryStage>("welcome");
   const [role, setRole] = useState<AccountRole | null>(null);
   const [storeSlug, setStoreSlug] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("store") ?? "");
   const [checkingRole, setCheckingRole] = useState(true);
-  const roleKey = useMemo(() => `stylishme-account-role:${user?.email ?? "guest"}`, [user?.email]);
+  const roleKey = useMemo(() => `stylishme-account-role:${user.email}`, [user.email]);
   const joinIntent = useMemo<AccountRole | null>(() => {
     if (typeof window === "undefined") return null;
     const value = new URLSearchParams(window.location.search).get("join");
@@ -54,7 +54,7 @@ export default function AppEntry({ user }: { user: User }) {
     fetch("/api/account")
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then(async (account) => {
-        if (user && joinIntent) {
+        if (joinIntent) {
           const response = await fetch("/api/account", {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -71,30 +71,25 @@ export default function AppEntry({ user }: { user: User }) {
         if (persisted === "customer" || persisted === "seller") {
           localStorage.setItem(roleKey, persisted);
           setRole(persisted);
-        } else if (saved === "customer" || (saved === "seller" && user)) {
+        } else if (saved === "customer" || saved === "seller") {
           setRole(saved);
         }
       })
       .catch(() => {
-        if (saved === "customer" || (saved === "seller" && user)) setRole(saved);
+        if (saved === "customer" || saved === "seller") setRole(saved);
       })
       .finally(() => setCheckingRole(false));
-  }, [joinIntent, roleKey, user]);
+  }, [joinIntent, roleKey, user.email]);
 
   const chooseRole = async (next: AccountRole) => {
     track("role_selected", "role", next);
-    if (next === "seller" && !user) {
-      track("signup_started", "flow", "seller");
-      setStage("auth");
-      return;
-    }
     const response = await fetch("/api/account", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ role: next }),
     });
     if (!response.ok && next === "seller") {
-      setStage("auth");
+      setStage("role");
       return;
     }
     localStorage.setItem(roleKey, next);
@@ -110,7 +105,7 @@ export default function AppEntry({ user }: { user: User }) {
 
   if (checkingRole) return <main className="entry-stage"><section className="entry-shell entry-loading"><header><strong>STYLISHME</strong><span>Namibian fashion, personally yours.</span></header><div><small>WELCOME BACK</small><h1>Preparing your StylishMe.</h1></div></section></main>;
 
-  if (role === "seller" && user) return <SellerApp user={user} />;
+  if (role === "seller") return <SellerApp user={user} />;
   if (role === "customer") return <StylishMeApp user={user} />;
 
   return <main className="entry-stage">
@@ -136,22 +131,8 @@ export default function AppEntry({ user }: { user: User }) {
           <article><span>02</span><div><strong>Build the complete look</strong><small>Style Me creates shoppable outfits for your occasion and budget.</small></div></article>
           <article><span>03</span><div><strong>Shop with confidence</strong><small>Save your fit, preview looks and choose delivery or collection.</small></div></article>
         </div>
-        <button className="entry-primary" onClick={() => setStage(user ? "role" : "auth")}>Continue</button>
+        <button className="entry-primary" onClick={() => setStage("role")}>Continue</button>
         <button className="entry-back" onClick={() => setStage("welcome")}>Back</button>
-      </>}
-      {stage === "auth" && <>
-        <div className="role-copy">
-          <small>YOUR STYLISHME</small>
-          <h1>Save your style across devices.</h1>
-          <p>Sign in to keep orders, your wardrobe, private previews and seller tools connected to you.</p>
-        </div>
-        <div className="auth-card">
-          <a className="entry-primary" href="/signin-with-chatgpt?return_to=/" onClick={() => track("signup_started", "flow", "account")}>Sign in securely</a>
-          <span><i />or<i /></span>
-          <button className="auth-guest" onClick={() => void chooseRole("customer")}>Continue as guest</button>
-          <small>Guests can browse and shop in this preview. Sign-in is required for seller tools and private try-on.</small>
-        </div>
-        <button className="entry-back" onClick={() => setStage("highlights")}>Back</button>
       </>}
       {stage === "role" && <>
         <div className="role-copy">

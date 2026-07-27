@@ -42,6 +42,32 @@ export const activityEvents = sqliteTable("activity_events", {
   index("activity_events_actor_hash_idx").on(table.actorHash),
 ]);
 
+export const authAccounts = sqliteTable("auth_accounts", {
+  email: text("email").primaryKey(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  avatarKey: text("avatar_key").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const authSessions = sqliteTable("auth_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  email: text("email").notNull().references(() => authAccounts.email, { onDelete: "cascade" }),
+  expiresAt: text("expires_at").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (table) => [
+  index("auth_sessions_email_idx").on(table.email),
+  index("auth_sessions_expiry_idx").on(table.expiresAt),
+]);
+
+export const authAttempts = sqliteTable("auth_attempts", {
+  attemptKey: text("attempt_key").primaryKey(),
+  attemptCount: integer("attempt_count").notNull(),
+  windowStart: text("window_start").notNull(),
+});
+
 export const customerOutfitStories = sqliteTable("customer_outfit_stories", {
   id: text("id").primaryKey(),
   ownerEmail: text("owner_email").notNull(),
