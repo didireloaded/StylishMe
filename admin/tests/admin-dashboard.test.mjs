@@ -107,3 +107,7 @@ test("both deployments document the shared privacy-safe analytics connection", a
   assert.match(siteEnv, /STYLISHME_ADMIN_API_KEY/);
   assert.match(siteEnv, /ACTIVITY_HASH_SALT/);
 });
+test("private admin ships branded browser metadata", async () => {
+  const icon = await read("app/icon.svg");
+  assert.match(icon, /StylishMe admin/);
+});
