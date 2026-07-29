@@ -1,14 +1,19 @@
 import { env } from "cloudflare:workers";
-import { consumeAuthAttempt, createPasswordHash, createSession, ensureAuthTables, safeRelativeReturnPath } from "../../../stylishme-auth";
+import { consumeAuthAttempt, createPasswordHash, ensureAuthTables, safeRelativeReturnPath } from "../../../stylishme-auth";
 import { inspectProfileImage } from "../../../customer-story-image";
+import { requestEmailVerification } from "../../../auth-actions";
+import { currentEmailConfig } from "../../../transactional-email";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   let avatarKey = "";
+  let createdAccount = "";
   try {
     const contentLength = Number(request.headers.get("content-length") ?? "0");
     if (contentLength > 6 * 1024 * 1024) return Response.json({ error: "Account request is too large" }, { status: 413 });
+    const emailConfig = currentEmailConfig();
+    if (!emailConfig.available) return Response.json({ error: "New account email is temporarily unavailable" }, { status: 503, headers: { "cache-control": "no-store" } });
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim().replace(/[\u0000-\u001f]/g, "").slice(0, 80);
     const email = String(form.get("email") ?? "").trim().toLowerCase().slice(0, 180);
@@ -34,9 +39,11 @@ export async function POST(request: Request) {
       env.DB.prepare("INSERT INTO auth_accounts (email, name, password_hash, password_salt, avatar_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(email, name, passwordRecord.hash, passwordRecord.salt, avatarKey, now, now),
       env.DB.prepare("INSERT INTO customer_state (email, cart_json, wishlist_json, orders_json, profile_json, updated_at) VALUES (?, '[]', '[]', '[]', ?, ?) ON CONFLICT(email) DO UPDATE SET profile_json = excluded.profile_json, updated_at = excluded.updated_at").bind(email, JSON.stringify({ accountRole: role, displayName: name }), now),
     ]);
-    const session = await createSession(email);
-    return Response.json({ success: true, returnTo }, { status: 201, headers: { "set-cookie": session.cookie, "cache-control": "no-store" } });
+    createdAccount = email;
+    await requestEmailVerification(env.DB, email, emailConfig);
+    return Response.json({ success: true, verificationRequired: true, returnTo: `/login?reason=check-email&returnTo=${encodeURIComponent(returnTo)}` }, { status: 201, headers: { "cache-control": "no-store" } });
   } catch {
+    if (createdAccount) await env.DB.batch([env.DB.prepare("DELETE FROM customer_state WHERE email = ?").bind(createdAccount), env.DB.prepare("DELETE FROM auth_accounts WHERE email = ?").bind(createdAccount)]).catch(() => undefined);
     if (avatarKey) await env.MEDIA.delete(avatarKey).catch(() => undefined);
     return Response.json({ error: "Unable to create your account right now" }, { status: 500 });
   }

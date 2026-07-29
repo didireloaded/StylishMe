@@ -19,11 +19,16 @@ const digest = async (value: string) => base64(new Uint8Array(await crypto.subtl
 export async function ensureAuthTables() {
   const env = await runtime();
   await env.DB.batch([
-    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_accounts (email TEXT PRIMARY KEY, name TEXT NOT NULL, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL, avatar_key TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_accounts (email TEXT PRIMARY KEY, name TEXT NOT NULL, password_hash TEXT NOT NULL, password_salt TEXT NOT NULL, avatar_key TEXT NOT NULL, email_verified_at TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY (email) REFERENCES auth_accounts(email) ON DELETE CASCADE)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_email_idx ON auth_sessions(email)"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS auth_sessions_expiry_idx ON auth_sessions(expires_at)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_attempts (attempt_key TEXT PRIMARY KEY, attempt_count INTEGER NOT NULL, window_start TEXT NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_identities (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, provider TEXT NOT NULL, provider_subject TEXT NOT NULL, provider_email TEXT, created_at TEXT NOT NULL, last_used_at TEXT NOT NULL, UNIQUE(provider, provider_subject))"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_action_tokens (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, action TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS auth_action_tokens_expiry_idx ON auth_action_tokens(action, expires_at)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS account_deletion_requests (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', requested_at TEXT NOT NULL, scheduled_for TEXT NOT NULL, completed_at TEXT, UNIQUE(account_email, status))"),
+    env.DB.prepare("CREATE INDEX IF NOT EXISTS account_deletion_requests_schedule_idx ON account_deletion_requests(status, scheduled_for)"),
   ]);
 }
 
@@ -61,7 +66,7 @@ export async function destroySession(token: string | undefined) {
 
 export const expiredSessionCookie = () => `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
 
-type AuthAttemptScope = "login" | "signup";
+type AuthAttemptScope = "login" | "signup" | "recovery";
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_COUNTER_RETENTION_MS = 24 * 60 * 60 * 1000;
 
@@ -77,7 +82,7 @@ async function incrementAuthAttempt(
   return Number(row?.attempt_count ?? Number.MAX_SAFE_INTEGER);
 }
 
-export async function consumeAuthAttempt(request: Request, email: string, limit: number, scope: "login" | "signup" = "login") {
+export async function consumeAuthAttempt(request: Request, email: string, limit: number, scope: AuthAttemptScope = "login") {
   await ensureAuthTables();
   const env = await runtime();
   const address = request.headers.get("cf-connecting-ip") ?? "unknown";
@@ -108,7 +113,7 @@ export async function getStylishMeUser(): Promise<StylishMeUser | null> {
   if (!token) return null;
   await ensureAuthTables();
   const env = await runtime();
-  const row = await env.DB.prepare("SELECT a.email, a.name, a.avatar_key FROM auth_sessions s JOIN auth_accounts a ON a.email = s.email WHERE s.token_hash = ? AND s.expires_at > ? LIMIT 1")
+  const row = await env.DB.prepare("SELECT a.email, a.name, a.avatar_key FROM auth_sessions s JOIN auth_accounts a ON a.email = s.email WHERE s.token_hash = ? AND s.expires_at > ? AND a.email_verified_at IS NOT NULL AND a.deleted_at IS NULL LIMIT 1")
     .bind(await digest(token), new Date().toISOString()).first() as { email: string; name: string; avatar_key: string } | null;
   if (!row) return null;
   return { email: row.email, fullName: row.name, displayName: row.name, avatarUrl: "/api/auth/avatar" };

@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   if (await getStylishMeUser()) redirect(returnTo);
   return <main className="entry-stage auth-page"><section className="entry-shell auth-shell">
     <header><strong>STYLISHME</strong><span>Namibian fashion, personally yours.</span></header>
-    <div className="auth-intro"><small>WELCOME TO YOUR STYLE</small><h1>{reason === "expired" ? "Sign in again to continue." : "Find the look. Make it yours."}</h1><p>Discover Namibian fashion, save your wardrobe and keep every order connected to you.</p></div>
-    <AuthForm returnTo={returnTo} signedOut={reason === "logged-out"}/>
+    <div className="auth-intro"><small>WELCOME TO YOUR STYLE</small><h1>{reason === "expired" ? "Sign in again to continue." : reason === "check-email" ? "Verify your email to continue." : "Find the look. Make it yours."}</h1><p>Discover Namibian fashion, save your wardrobe and keep every order connected to you.</p></div>
+    <AuthForm returnTo={returnTo} signedOut={reason === "logged-out"} reason={reason}/>
   </section></main>;
 }

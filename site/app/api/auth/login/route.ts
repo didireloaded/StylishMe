@@ -11,10 +11,14 @@ export async function POST(request: Request) {
     if (new TextEncoder().encode(password).byteLength > 256) return Response.json({ error: "Email or password is incorrect" }, { status: 401 });
     if (!await consumeAuthAttempt(request, email, 10, "login")) return Response.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
     await ensureAuthTables();
-    const row = await env.DB.prepare("SELECT email, password_hash, password_salt FROM auth_accounts WHERE email = ? LIMIT 1").bind(email).first() as { email: string; password_hash: string; password_salt: string } | null;
-    if (!row || !await passwordMatches(password, row.password_salt, row.password_hash)) return Response.json({ error: "Email or password is incorrect" }, { status: 401 });
+    const row = await env.DB.prepare("SELECT email, password_hash, password_salt, email_verified_at, deleted_at FROM auth_accounts WHERE email = ? LIMIT 1").bind(email).first() as { email: string; password_hash: string; password_salt: string; email_verified_at: string | null; deleted_at: string | null } | null;
+    if (!row || !await passwordMatches(password, row.password_salt, row.password_hash)) return Response.json({ error: "Email or password is incorrect" }, { status: 401, headers: { "cache-control": "no-store" } });
+    if (row.deleted_at) return Response.json({ error: "This account is no longer active" }, { status: 403, headers: { "cache-control": "no-store" } });
+    if (!row.email_verified_at) return Response.json({ error: "Verify your email before signing in", verificationRequired: true }, { status: 403, headers: { "cache-control": "no-store" } });
+    const deletion = await env.DB.prepare("SELECT id FROM account_deletion_requests WHERE account_email = ? AND status = 'pending' LIMIT 1").bind(row.email).first();
+    if (deletion) await env.DB.prepare("UPDATE account_deletion_requests SET status = 'cancelled' WHERE account_email = ? AND status = 'pending'").bind(row.email).run();
     await clearAuthAttempts(request, email, "login");
     const session = await createSession(row.email);
-    return Response.json({ success: true, returnTo: safeRelativeReturnPath(typeof body.returnTo === "string" ? body.returnTo : "/") }, { headers: { "set-cookie": session.cookie, "cache-control": "no-store" } });
+    return Response.json({ success: true, deletionCancelled: Boolean(deletion), returnTo: safeRelativeReturnPath(typeof body.returnTo === "string" ? body.returnTo : "/") }, { headers: { "set-cookie": session.cookie, "cache-control": "no-store" } });
   } catch { return Response.json({ error: "Unable to sign in right now" }, { status: 500 }); }
 }
