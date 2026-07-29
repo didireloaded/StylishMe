@@ -47,8 +47,9 @@ export async function POST(request: Request) {
     if (size > 1_000_000) return Response.json({ error: "Account update is too large" }, { status: 413 });
     const body = await request.json() as Record<string, unknown>;
     const cart = Array.isArray(body.cart) ? body.cart.slice(0, 100) : [];
+    // Accept catalogue-safe product identities from launch inventory and normalized seller catalogues.
     const wishlist = Array.isArray(body.wishlist)
-      ? body.wishlist.filter((id): id is string => typeof id === "string" && /^p\d{1,4}$/.test(id)).slice(0, 500)
+      ? body.wishlist.filter((id): id is string => typeof id === "string" && /^[a-zA-Z0-9:_-]{1,180}$/.test(id)).slice(0, 500)
       : [];
     const inputProfile = body.profile && typeof body.profile === "object" ? body.profile as Record<string, unknown> : {};
     const savedOutfits = Array.isArray(body.savedOutfits)

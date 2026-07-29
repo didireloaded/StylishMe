@@ -3,18 +3,27 @@ export type SellerProductFilter = "All" | "Live" | "Needs details" | "Needs atte
 export type SellerOrderFilter = "To prepare" | "Ready" | "Completed";
 
 const slug = (value: string) =>
-  value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  value.toLowerCase().trim().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "store";
 
-export function storeShareUrl(storeName: string, origin = "https://stylishme-namibia.didireloaded.chatgpt.site") {
-  return `${origin.replace(/\/$/, "")}/?store=${slug(storeName)}`;
+export function catalogueProductUrl(storeNameOrSlug: string, productNameOrSlug: string) {
+  return `/stores/${slug(storeNameOrSlug)}/products/${slug(productNameOrSlug)}`;
 }
 
-export function productShareUrl(storeName: string, productName: string, origin?: string) {
-  return `${storeShareUrl(storeName, origin)}&product=${slug(productName)}`;
+export function storeShareUrl(storeName: string, origin = "https://stylishme-namibia.didireloaded.chatgpt.site") {
+  return `${origin.replace(/\/$/, "")}/stores/${slug(storeName)}`;
+}
+
+export function productShareUrl(storeName: string, productName: string, origin = "https://stylishme-namibia.didireloaded.chatgpt.site") {
+  return `${origin.replace(/\/$/, "")}${catalogueProductUrl(storeName, productName)}`;
 }
 
 export function matchesStoreSlug(storeName: string, storeSlug: string) {
   return slug(storeName) === slug(storeSlug);
+}
+
+export function matchesProductSlug(productName: string, productSlug: string) {
+  return slug(productName) === slug(productSlug);
 }
 
 export function filterSellerProducts<T extends { status: string; variants: Array<{ quantity: number }> }>(

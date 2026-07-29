@@ -1,3 +1,5 @@
+import { productShareUrl as unifiedProductShareUrl, storeShareUrl as unifiedStoreShareUrl } from "./unified-domain";
+
 export type ProductDraft = {
   name: string;
   description: string;
@@ -58,11 +60,12 @@ export function storeShareUrl(storeName: string) {
   const origin = typeof window === "undefined"
     ? "https://stylishme-namibia.didireloaded.chatgpt.site"
     : window.location.origin;
-  const slug = storeName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  return `${origin}/?store=${slug}`;
+  return unifiedStoreShareUrl(storeName, origin);
 }
 
 export function productShareUrl(storeName: string, productName: string) {
-  const slug = productName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  return `${storeShareUrl(storeName)}&product=${slug}`;
+  const origin = typeof window === "undefined"
+    ? "https://stylishme-namibia.didireloaded.chatgpt.site"
+    : window.location.origin;
+  return unifiedProductShareUrl(storeName, productName, origin);
 }

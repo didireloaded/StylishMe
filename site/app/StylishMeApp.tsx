@@ -15,6 +15,7 @@ import TryOnView from "./TryOnView";
 import { getFirstStockedSize, getSizeStock, mergeCartLinesWithinStock, type CartLine } from "./cart-commerce";
 import { getOutfitTotal, OUTFITS, OUTFIT_STORIES } from "./outfit-catalog";
 import { buildProduct, IMG, type Product } from "./product-catalog";
+import { toCustomerProduct } from "./customer-catalogue";
 import { DEFAULT_SHOP_FILTERS, filterShopProducts, type ShopFilterState } from "./shop-filter";
 import { checkoutDestinationHeading } from "./unified-domain";
 import type { EligibleStoryItem, PublicCustomerStory } from "./customer-story-domain";
@@ -110,9 +111,7 @@ const designerSummaries: Record<string, DesignerSummary> = {
 const seededDesignerNames = Object.keys(designerSummaries);
 const shopCategories = ["All", "Women", "Men", "Clothing", "Shoes", "Accessories", "Bags", "Designer", "Traditional", "Sale"] as const;
 
-const products: Product[] = Array.from({ length: 41 }, (_, index) => buildProduct(index));
-const productById = new Map(products.map((product) => [product.id, product]));
-const shopLocations = [...new Set(products.map((product) => product.location))];
+const seededProducts: Product[] = Array.from({ length: 41 }, (_, index) => buildProduct(index));
 const filterColors = [
   ["Pink", "#f3a4b8"],
   ["Lilac", "#988ee8"],
@@ -132,8 +131,8 @@ const sellerLaneNames: Record<SellerLane, string[]> = {
   Merch: ["Omutima Studio", "Desert Thread"],
 };
 
-const priceById = Object.fromEntries(products.map((product) => [product.id, product.price]));
-const storyProducts = products.map(({ id, name, image, price, stock }) => ({
+const priceById = Object.fromEntries(seededProducts.map((product) => [product.id, product.price]));
+const storyProducts = seededProducts.map(({ id, name, image, price, stock }) => ({
   id,
   name,
   image,
@@ -189,6 +188,8 @@ export default function StylishMeApp({
   user: { name: string; email: string; avatarUrl: string } | null;
   demoMode?: boolean;
 }) {
+  const [catalogueProducts, setCatalogueProducts] = useState<Product[]>(seededProducts);
+  const products = catalogueProducts;
   const [view, setView] = useState<View>(() => {
     if (typeof window === "undefined") return "home";
     const requested = new URLSearchParams(window.location.search).get("view");
@@ -245,6 +246,25 @@ export default function StylishMeApp({
   const [addressEditor, setAddressEditor] = useState<AddressEditor | null>(null);
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const stateStorageKey = demoMode ? "stylishme-demo-customer-state" : `stylishme-state:${user?.email ?? "signed-out"}`;
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/catalog")
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((body) => {
+        if (!active || !Array.isArray(body?.products)) return;
+        const liveProducts = body.products.map(toCustomerProduct).filter((product: Product | null): product is Product => Boolean(product));
+        const merged = new Map(seededProducts.map((product) => [product.id, product]));
+        for (const product of liveProducts) merged.set(product.id, product);
+        setCatalogueProducts(Array.from(merged.values()));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+  const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
+  const shopLocations = useMemo(() => [...new Set(products.map((product) => product.location))], [products]);
+  const catalogueDesignerNames = useMemo(() => [...new Set(products.map((product) => product.designer))], [products]);
+  const designerFilterNames = useMemo(() => [...new Set([...seededDesignerNames, ...products.filter((product) => product.sellerType === "Designer").map((product) => product.designer)])], [products]);
 
   const selected = products.find(p => p.id === selectedId) ?? products[0];
   const activeCustomerStory = customerStories.find(story => story.id === activeCustomerStoryId) ?? null;
@@ -353,7 +373,7 @@ export default function StylishMeApp({
         } catch {}
       }
     }).finally(() => setHydrated(true));
-  }, [stateStorageKey, user]);
+  }, [productById, stateStorageKey, user]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -379,7 +399,7 @@ export default function StylishMeApp({
     setSelectedProductImage(linkedProduct.image);
     setProductReturnView("shop");
     setView("product");
-  }, []);
+  }, [productById]);
 
   const navigate = (next: View) => { setView(next); setFiltersOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const trackActivity = (event: string, targetType?: string, targetId?: string) => {
@@ -640,14 +660,14 @@ export default function StylishMeApp({
   };
 
   const filtered = useMemo(() => {
-    let list = filterShopProducts(products, category, seededDesignerNames, shopFilters).filter((product) => {
+    let list = filterShopProducts(products, category, designerFilterNames, shopFilters).filter((product) => {
       const searchable = `${product.name} ${product.designer} ${product.category} ${product.location}`.toLowerCase();
       return searchable.includes(query.toLowerCase());
     });
     if (sort === "Price low to high") list = [...list].sort((a, b) => a.price - b.price);
     if (sort === "Price high to low") list = [...list].sort((a, b) => b.price - a.price);
     return list;
-  }, [category, query, shopFilters, sort]);
+  }, [category, designerFilterNames, products, query, shopFilters, sort]);
 
   const resetShopFilters = () => {
     setCategory("All");
@@ -972,7 +992,7 @@ export default function StylishMeApp({
         onClose={() => setActiveCustomerStoryId(null)}
       />}
 
-      {filtersOpen && <div className="sheet-backdrop" onClick={() => setFiltersOpen(false)}><section className="filter-sheet" role="dialog" aria-modal="true" aria-label="Shop filters" onClick={e => e.stopPropagation()}><div className="sheet-handle" /><div className="sheet-title"><h2>Sort &amp; filters</h2><button onClick={resetShopFilters}>Reset</button></div><h3>Sort by</h3><select className="sheet-select" aria-label="Sort products" value={sort} onChange={e => setSort(e.target.value)}><option>Recommended</option><option>Price low to high</option><option>Price high to low</option></select><h3>Category</h3><div className="chip-row">{shopCategories.map(item => <button aria-pressed={category === item} className={category === item ? "active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><h3>Size</h3><div className="chip-row">{["XS", "S", "M", "L", "XL"].map(item => <button aria-pressed={shopFilters.size === item} className={shopFilters.size === item ? "active" : ""} key={item} onClick={() => setShopFilters(current => ({ ...current, size: current.size === item ? DEFAULT_SHOP_FILTERS.size : item }))}>{item}</button>)}</div><h3>Colour</h3><div className="filter-swatches">{filterColors.map(([label, color]) => <button key={color} aria-label={label} aria-pressed={shopFilters.color === color} className={shopFilters.color === color ? "active" : ""} style={{ background: color }} onClick={() => setShopFilters(current => ({ ...current, color: current.color === color ? DEFAULT_SHOP_FILTERS.color : color }))} />)}</div><h3>Price</h3><div className="chip-row">{["Under N$800", "N$800 to N$1,500", "Over N$1,500"].map(item => <button key={item} aria-pressed={shopFilters.price === item} className={shopFilters.price === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, price: current.price === item ? DEFAULT_SHOP_FILTERS.price : item }))}>{item}</button>)}</div><h3>Designer</h3><div className="chip-row">{seededDesignerNames.map(item => <button key={item} aria-pressed={shopFilters.designer === item} className={shopFilters.designer === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, designer: current.designer === item ? DEFAULT_SHOP_FILTERS.designer : item }))}>{item}</button>)}</div><h3>Location</h3><div className="chip-row">{shopLocations.map(item => <button key={item} aria-pressed={shopFilters.location === item} className={shopFilters.location === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, location: current.location === item ? DEFAULT_SHOP_FILTERS.location : item }))}>{item}</button>)}</div><h3>Delivery</h3><div className="chip-row">{["Nationwide", "Store collection", "Fast delivery"].map(item => <button key={item} aria-pressed={shopFilters.delivery === item} className={shopFilters.delivery === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, delivery: current.delivery === item ? DEFAULT_SHOP_FILTERS.delivery : item }))}>{item}</button>)}</div><button className="gradient-button full" onClick={() => setFiltersOpen(false)}>Show {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}</button></section></div>}
+      {filtersOpen && <div className="sheet-backdrop" onClick={() => setFiltersOpen(false)}><section className="filter-sheet" role="dialog" aria-modal="true" aria-label="Shop filters" onClick={e => e.stopPropagation()}><div className="sheet-handle" /><div className="sheet-title"><h2>Sort &amp; filters</h2><button onClick={resetShopFilters}>Reset</button></div><h3>Sort by</h3><select className="sheet-select" aria-label="Sort products" value={sort} onChange={e => setSort(e.target.value)}><option>Recommended</option><option>Price low to high</option><option>Price high to low</option></select><h3>Category</h3><div className="chip-row">{shopCategories.map(item => <button aria-pressed={category === item} className={category === item ? "active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><h3>Size</h3><div className="chip-row">{["XS", "S", "M", "L", "XL"].map(item => <button aria-pressed={shopFilters.size === item} className={shopFilters.size === item ? "active" : ""} key={item} onClick={() => setShopFilters(current => ({ ...current, size: current.size === item ? DEFAULT_SHOP_FILTERS.size : item }))}>{item}</button>)}</div><h3>Colour</h3><div className="filter-swatches">{filterColors.map(([label, color]) => <button key={color} aria-label={label} aria-pressed={shopFilters.color === color} className={shopFilters.color === color ? "active" : ""} style={{ background: color }} onClick={() => setShopFilters(current => ({ ...current, color: current.color === color ? DEFAULT_SHOP_FILTERS.color : color }))} />)}</div><h3>Price</h3><div className="chip-row">{["Under N$800", "N$800 to N$1,500", "Over N$1,500"].map(item => <button key={item} aria-pressed={shopFilters.price === item} className={shopFilters.price === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, price: current.price === item ? DEFAULT_SHOP_FILTERS.price : item }))}>{item}</button>)}</div><h3>Designer</h3><div className="chip-row">{catalogueDesignerNames.map(item => <button key={item} aria-pressed={shopFilters.designer === item} className={shopFilters.designer === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, designer: current.designer === item ? DEFAULT_SHOP_FILTERS.designer : item }))}>{item}</button>)}</div><h3>Location</h3><div className="chip-row">{shopLocations.map(item => <button key={item} aria-pressed={shopFilters.location === item} className={shopFilters.location === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, location: current.location === item ? DEFAULT_SHOP_FILTERS.location : item }))}>{item}</button>)}</div><h3>Delivery</h3><div className="chip-row">{["Nationwide", "Store collection", "Fast delivery"].map(item => <button key={item} aria-pressed={shopFilters.delivery === item} className={shopFilters.delivery === item ? "active" : ""} onClick={() => setShopFilters(current => ({ ...current, delivery: current.delivery === item ? DEFAULT_SHOP_FILTERS.delivery : item }))}>{item}</button>)}</div><button className="gradient-button full" onClick={() => setFiltersOpen(false)}>Show {filtered.length} {filtered.length === 1 ? "piece" : "pieces"}</button></section></div>}
       {pendingOutfitAdd && <div className="sheet-backdrop" onClick={() => setPendingOutfitAdd(null)}><section className="filter-sheet outfit-size-sheet" role="dialog" aria-modal="true" aria-label="Choose outfit sizes" onClick={event => event.stopPropagation()}><div className="sheet-handle" /><div className="sheet-title"><div><small>FIT PASSPORT CHECK</small><h2>Choose outfit sizes</h2></div><button onClick={() => setPendingOutfitAdd(null)}>Cancel</button></div><p>Your saved size is unavailable for {pendingOutfitAdd.selectionProductIds.length} {pendingOutfitAdd.selectionProductIds.length === 1 ? "piece" : "pieces"}. Choose a stocked size before adding the look.</p>{pendingOutfitAdd.selectionProductIds.map(productId => { const product = productById.get(productId)!; return <fieldset key={productId}><legend>{product.name}</legend><div className="chip-row">{product.sizes.map((size, index) => product.stock[index] > 0 && <button type="button" key={size} aria-label={`Select ${size} for ${product.name}`} aria-pressed={outfitSizeSelections[product.id] === size} className={outfitSizeSelections[product.id] === size ? "active" : ""} onClick={() => setOutfitSizeSelections(current => ({ ...current, [product.id]: size }))}>{size}<small>{product.stock[index]} left</small></button>)}</div></fieldset>; })}{pendingOutfitAdd.unavailableCount > 0 && <p className="selection-warning">{pendingOutfitAdd.unavailableCount} unavailable {pendingOutfitAdd.unavailableCount === 1 ? "piece will" : "pieces will"} be skipped.</p>}<button className="gradient-button full" disabled={pendingOutfitAdd.selectionProductIds.some(productId => !outfitSizeSelections[productId])} onClick={() => commitOutfitAdd(pendingOutfitAdd.outfitId, outfitSizeSelections, pendingOutfitAdd.productIds)}>Add selected items</button></section></div>}
       {sizeGuideOpen && <div className="sheet-backdrop" onClick={() => setSizeGuideOpen(false)}><section className="filter-sheet utility-sheet" role="dialog" aria-modal="true" aria-label="Size guide" onClick={(event) => event.stopPropagation()}><div className="sheet-title"><div><small>FIT PASSPORT</small><h2>Size guide</h2></div><button aria-label="Close size guide" onClick={() => setSizeGuideOpen(false)}>Close</button></div><h3>Find your best starting size</h3><p>Compare your usual size with the product fit, then use the stock buttons on the product page. Fit Passport recommendations are guidance, not a guarantee.</p><div className="size-guide-grid"><span><strong>XS–S</strong><small>Closer fit</small></span><span><strong>M</strong><small>Regular fit</small></span><span><strong>L–XL</strong><small>Roomier fit</small></span></div><button className="gradient-button full" onClick={() => setSizeGuideOpen(false)}>Use {profile.size} as my starting size</button></section></div>}
       {addressEditor && <div className="sheet-backdrop" onClick={() => setAddressEditor(null)}><section className="filter-sheet utility-sheet address-editor" role="dialog" aria-modal="true" aria-label={addressEditor.index === null ? "Add address" : "Edit address"} onClick={(event) => event.stopPropagation()}><div className="sheet-title"><h2>{addressEditor.index === null ? "Add address" : "Edit address"}</h2><button aria-label="Close address editor" onClick={() => setAddressEditor(null)}>Cancel</button></div><label><span>Address label</span><input aria-label="Address label" value={addressEditor.label} onChange={(event) => setAddressEditor((current) => current ? { ...current, label: event.target.value } : current)} /></label><label><span>Street address</span><input aria-label="Street address" value={addressEditor.street} onChange={(event) => setAddressEditor((current) => current ? { ...current, street: event.target.value } : current)} /></label><label><span>Town or city</span><input aria-label="Town or city" value={addressEditor.city} onChange={(event) => setAddressEditor((current) => current ? { ...current, city: event.target.value } : current)} /></label><button className="gradient-button full" disabled={!addressEditor.label.trim() || !addressEditor.street.trim() || !addressEditor.city.trim()} onClick={saveAddress}>Save address</button></section></div>}

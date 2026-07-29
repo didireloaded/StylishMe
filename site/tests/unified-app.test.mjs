@@ -26,7 +26,7 @@ test("keeps store links inside the unified app and scoped to one storefront", as
 
   assert.equal(
     domain.storeShareUrl("Omutima Studio", "https://stylishme-namibia.didireloaded.chatgpt.site"),
-    "https://stylishme-namibia.didireloaded.chatgpt.site/?store=omutima-studio",
+    "https://stylishme-namibia.didireloaded.chatgpt.site/stores/omutima-studio",
   );
   assert.equal(domain.matchesStoreSlug("Omutima Studio", "omutima-studio"), true);
   assert.match(storefront, /Only pieces from/);
@@ -113,8 +113,9 @@ test("seller APIs use authenticated ownership and approval-gated public catalogu
     assert.match(route, /sellerState\.ownerEmail/);
     assert.doesNotMatch(route, /x-seller-invite/);
   }
-  assert.match(catalogue, /sellerState\.approved/);
-  assert.match(catalogue, /publicStore/);
+  assert.match(catalogue, /catalogProducts\.status/);
+  assert.match(sellerState, /approved: state\.store\.approved/);
+  assert.match(catalogue, /store: \{/);
   assert.doesNotMatch(catalogue, /phone:/);
   assert.doesNotMatch(catalogue, /email:/);
 });

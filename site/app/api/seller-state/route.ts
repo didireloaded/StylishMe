@@ -4,6 +4,7 @@ import { sellerState } from "../../../db/schema";
 import { recordActivity } from "../../activity";
 import { getStylishMeUser } from "../../stylishme-auth";
 import { listingQuality } from "../../seller-domain";
+import { syncSellerCatalogue } from "../../catalogue-storage";
 import { requireAccountRole } from "../../account-role";
 
 type StoreInput = {
@@ -103,19 +104,16 @@ export async function POST(request: Request) {
     const [existing] = await db.select().from(sellerState).where(eq(sellerState.ownerEmail, user.email)).limit(1);
     const state = cleanState(body.state, user.email);
     if (!state) return Response.json({ error: "Add a store name and owner name" }, { status: 400 });
-    const values = {
-      inviteToken: existing?.inviteToken ?? crypto.randomUUID(),
+    const sellerId = existing?.inviteToken ?? crypto.randomUUID();
+    const updatedAt = new Date().toISOString();
+    await syncSellerCatalogue({
+      sellerId,
       ownerEmail: user.email,
       approved: state.store.approved,
       storeName: state.store.name,
-      stateJson: JSON.stringify(state),
-      updatedAt: new Date().toISOString(),
-    };
-    if (existing) {
-      await db.update(sellerState).set(values).where(eq(sellerState.ownerEmail, user.email));
-    } else {
-      await db.insert(sellerState).values(values);
-    }
+      state: state as Parameters<typeof syncSellerCatalogue>[0]["state"],
+      updatedAt,
+    });
     let previousState: { products?: unknown[] } | null = null;
     if (existing) {
       try { previousState = JSON.parse(existing.stateJson) as { products?: unknown[] }; } catch {}

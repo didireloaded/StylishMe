@@ -186,7 +186,7 @@ test("derives designer catalogues and exposes the complete Shop category set", a
   assert.match(app, /onClick=\{\(\) => openDesigner\(selected\.designer, "product"\)\}/);
   assert.match(app, /header\(selectedDesigner, designerReturnView\)/);
   assert.match(app, /products\.filter\(\(product\) => product\.designer === selectedDesigner\)/);
-  assert.match(app, /filterShopProducts\(products, category, seededDesignerNames, shopFilters\)/);
+  assert.match(app, /filterShopProducts\(products, category, designerFilterNames, shopFilters\)/);
   assert.match(app, /"Accessories"/);
   assert.match(app, /"Designer"/);
   assert.match(app, /"Sale"/);
