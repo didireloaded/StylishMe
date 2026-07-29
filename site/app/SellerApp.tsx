@@ -23,6 +23,26 @@ type SettlementState = {
   batches: Array<{ id: string; amountCents: number; currency: string; status: string; createdAt: string; releasedAt?: string | null }>;
   payoutAccountStatus: string;
 };
+type SellerOrder = {
+  id: string; orderId: string; status: string; statusLabel: string; fulfilmentMethod: "delivery" | "collection";
+  subtotal: number; createdAt: string; deliveryAddress: { label: string; street: string; city: string } | null;
+  items: Array<{ productId: string; name: string; size: string; colour: string; quantity: number; total: number }>;
+  provider: string | null; trackingNumber: string | null; trackingUrl: string | null;
+  events: Array<{ status: string; label: string; description: string; location: string | null; occurredAt: string }>;
+};
+type SellerOrderFilter = "Needs action" | "Preparing" | "Ready for pickup" | "Shipped" | "Completed";
+const sellerOrderFilters: SellerOrderFilter[] = ["Needs action", "Preparing", "Ready for pickup", "Shipped", "Completed"];
+const orderMatchesFilter = (order: SellerOrder, filter: SellerOrderFilter) => filter === "Needs action" ? order.status === "new"
+  : filter === "Preparing" ? order.status === "preparing"
+  : filter === "Ready for pickup" ? order.status === "ready_to_collect"
+  : filter === "Shipped" ? ["shipped", "in_transit", "out_for_delivery"].includes(order.status)
+  : ["delivered", "collected"].includes(order.status);
+const nextSellerStatus = (order: SellerOrder) => {
+  const path = order.fulfilmentMethod === "collection"
+    ? ["new", "preparing", "ready_to_collect", "collected"]
+    : ["new", "preparing", "shipped", "in_transit", "out_for_delivery", "delivered"];
+  return path[path.indexOf(order.status) + 1] ?? "";
+};
 
 const images = [
   "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=900&q=84",
@@ -69,6 +89,10 @@ export default function SellerApp({
   const [needsSetup, setNeedsSetup] = useState(false);
   const [loading, setLoading] = useState(!demoMode);
   const [settlement, setSettlement] = useState<SettlementState | null>(null);
+  const [sellerOrders, setSellerOrders] = useState<SellerOrder[]>([]);
+  const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>("Needs action");
+  const [courierDrafts, setCourierDrafts] = useState<Record<string, { provider: string; trackingNumber: string }>>({});
+  const [busyOrderId, setBusyOrderId] = useState("");
   const [newStore, setNewStore] = useState({ name: "", type: "Designer", owner: user.name, city: "Windhoek", email: user.email, phone: "" });
 
   useEffect(() => {
@@ -92,6 +116,13 @@ export default function SellerApp({
       .then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to load payouts"); return body; })
       .then(setSettlement)
       .catch(error => setToast(error instanceof Error ? error.message : "Unable to load payouts"));
+  }, [demoMode, view]);
+  useEffect(() => {
+    if (demoMode || !["today", "orders"].includes(view)) return;
+    void fetch("/api/seller-orders", { cache: "no-store" })
+      .then(async response => { const body = await response.json(); if (!response.ok) throw new Error(body.error ?? "Unable to load orders"); return body; })
+      .then(body => setSellerOrders(Array.isArray(body.orders) ? body.orders : []))
+      .catch(error => setToast(error instanceof Error ? error.message : "Unable to load orders"));
   }, [demoMode, view]);
   const save = async (next: SellerState) => {
     setState(next);
@@ -133,8 +164,30 @@ export default function SellerApp({
   const pieces = state.products.reduce((sum, p) => sum + totalStock(p.variants), 0);
   const visibleProducts = filterSellerProducts(state.products, productFilter);
   const ready = productReadiness(draft);
+  const visibleSellerOrders = sellerOrders.filter(order => orderMatchesFilter(order, sellerOrderFilter));
   const go = (next: View) => { setView(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const copy = async (value: string, message: string) => { try { await navigator.clipboard.writeText(value); } catch {} setToast(message); };
+  const advanceOrder = async (order: SellerOrder) => {
+    const status = nextSellerStatus(order);
+    if (!status || demoMode) return;
+    const courier = courierDrafts[order.id] ?? { provider: "", trackingNumber: "" };
+    setBusyOrderId(order.id);
+    try {
+      const response = await fetch("/api/seller-orders", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sellerOrderId: order.id, status, ...(status === "shipped" ? courier : {}) }),
+      });
+      const body = await response.json() as { order?: SellerOrder; error?: string };
+      if (!response.ok || !body.order) throw new Error(body.error ?? "Unable to update this order");
+      setSellerOrders(current => current.map(item => item.id === body.order?.id ? body.order : item));
+      setToast(`${body.order.statusLabel} saved`);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Unable to update this order");
+    } finally {
+      setBusyOrderId("");
+    }
+  };
   const adjustStock = async (productId: string, variantIndex: number, change: number) => {
     if (!stockReason.trim()) return setToast("Choose a reason before changing stock");
     const next = { ...state, products: state.products.map(product => product.id !== productId ? product : ({ ...product, variants: product.variants.map((variant, index) => index !== variantIndex ? variant : ({ ...variant, quantity: Math.max(0, variant.quantity + change) })) })) };
@@ -179,7 +232,7 @@ export default function SellerApp({
     <section className="welcome"><div><small>GOOD MORNING</small><h1>Good morning, {state.store.owner}.</h1><p>Here is what is happening with your store today.</p></div><span>{state.store.approved ? "Store open" : "Finish setup"}</span></section>
     <section className="editorial-hero"><img src={(live[0] ?? state.products[0])?.images[0] ?? images[0]} alt="" /><div><small>YOUR SHOP TODAY</small><h2>{pieces} pieces ready to be discovered.</h2><p>{live.length} published products · {low.length} need stock attention</p><button onClick={() => go("add")}>Add product</button></div></section>
     <section className="seller-performance" aria-labelledby="seller-performance-title"><div className="section-title"><div><small>STORE PERFORMANCE</small><h2 id="seller-performance-title">Truthful business signals.</h2></div></div><div><article><small>Sales</small><strong>Sales unavailable</strong><span>Payment provider not connected</span></article><article><small>Published</small><strong>{live.length}</strong><span>{state.products.length} total products</span></article><article><small>Available units</small><strong>{pieces}</strong><span>{low.length} low-stock products</span></article></div></section>
-    <section><div className="section-title"><div><small>AT A GLANCE</small><h2>Marketplace status</h2></div><button onClick={() => go("collection")}>View products</button></div><div className="status-stories">{[["Published", live.length], ["Needs details", state.products.filter(p => p.status === "Changes requested").length], ["Low stock", low.length], ["Orders", 0]].map(([label, value]) => <button key={label} onClick={() => go(label === "Orders" ? "orders" : label === "Low stock" ? "inventory" : "collection")}><span>{value}</span><small>{label}</small></button>)}</div></section>
+    <section><div className="section-title"><div><small>AT A GLANCE</small><h2>Marketplace status</h2></div><button onClick={() => go("collection")}>View products</button></div><div className="status-stories">{[["Published", live.length], ["Needs details", state.products.filter(p => p.status === "Changes requested").length], ["Low stock", low.length], ["Orders", sellerOrders.length]].map(([label, value]) => <button key={label} onClick={() => go(label === "Orders" ? "orders" : label === "Low stock" ? "inventory" : "collection")}><span>{value}</span><small>{label}</small></button>)}</div></section>
     <section><div className="section-title"><div><small>NEEDS ATTENTION</small><h2>Clear work for today.</h2></div></div><div className="attention-list">{low.length > 0 && <button onClick={() => go("inventory")}><i className="coral" /><div><strong>{low.length} {low.length === 1 ? "product is" : "products are"} almost out of stock</strong><small>Open variant inventory and record a reason for every adjustment.</small></div><b>→</b></button>}{state.products.some(p => p.status === "Changes requested") && <button onClick={() => go("collection")}><i className="lilac" /><div><strong>Product details need changes</strong><small>Complete the listing before it can publish.</small></div><b>→</b></button>}{!low.length && !state.products.some(p => p.status === "Changes requested") && <div className="seller-empty"><strong>Nothing urgent right now</strong><small>New orders and stock issues will appear here when real records are available.</small></div>}</div></section>
     <section className="share-card"><div><small>YOUR STOREFRONT</small><h2>Share your store</h2><p>Send customers directly to your StylishMe collection.</p></div><button onClick={() => copy(storeShareUrl(state.store.name), "Store link copied")}><Icon name="share" /> Copy link</button></section>
   </>;
@@ -200,9 +253,23 @@ export default function SellerApp({
     </form>
   </>;
   else if (view === "orders") content = <>
-    {header("Orders")}<section className="page-intro"><small>OPERATIONAL CENTRE</small><h1>Orders</h1><p>Only orders containing products from {state.store.name} will appear here.</p></section><div className="filter-chips">{["Needs action", "Confirmed", "Preparing", "Ready for pickup", "Shipped", "Completed", "Returns", "Cancelled"].map((label, index) => <button key={label} className={index === 0 ? "active" : ""}>{label}</button>)}</div><section className="seller-empty large"><strong>No seller orders recorded</strong><small>The marketplace does not yet store seller-specific fulfilment records. No sample customer names or orders are shown.</small></section>
-  </>;
-  else if (view === "inventory") content = <>
+    {header("Orders")}<section className="page-intro"><small>OPERATIONAL CENTRE</small><h1>Orders</h1><p>Only verified orders containing products from {state.store.name} appear here.</p></section>
+    <div className="filter-chips">{sellerOrderFilters.map(label => <button key={label} className={sellerOrderFilter === label ? "active" : ""} aria-pressed={sellerOrderFilter === label} onClick={() => setSellerOrderFilter(label)}>{label}</button>)}</div>
+    <section className="seller-order-list">{visibleSellerOrders.map(order => {
+      const nextStatus = nextSellerStatus(order);
+      const courier = courierDrafts[order.id] ?? { provider: "dhl", trackingNumber: "" };
+      return <article className="form-card seller-order-card" key={order.id}>
+        <div className="section-title"><div><small>{order.fulfilmentMethod === "collection" ? "STORE COLLECTION" : "DELIVERY"}</small><h2>{order.orderId}</h2></div><span className="status live">{order.statusLabel}</span></div>
+        <p>{new Date(order.createdAt).toLocaleDateString("en-NA")} · N${order.subtotal.toLocaleString()}</p>
+        <div className="order-piece-list">{order.items.map(item => <div key={`${order.id}-${item.productId}`}><strong>{item.name} × {item.quantity}</strong><small>{item.size}{item.colour ? ` · ${item.colour}` : ""}</small></div>)}</div>
+        {order.deliveryAddress && <div className="seller-dispatch-address"><small>DELIVER TO</small><strong>{order.deliveryAddress.label}</strong><span>{order.deliveryAddress.street}, {order.deliveryAddress.city}</span></div>}
+        {order.trackingNumber && <p><strong>{order.provider?.toUpperCase()}</strong> · {order.trackingNumber}</p>}
+        {nextStatus === "shipped" && <div className="form-pair"><label>Courier<select value={courier.provider} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, provider: event.target.value } }))}><option value="dhl">DHL</option><option value="local">Local courier</option></select></label><label>Tracking number<input value={courier.trackingNumber} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, trackingNumber: event.target.value } }))} placeholder="Required before shipping" /></label></div>}
+        {nextStatus && <button className="primary" disabled={busyOrderId === order.id} onClick={() => void advanceOrder(order)}>{busyOrderId === order.id ? "Saving…" : `Mark ${nextStatus.replaceAll("_", " ")}`}</button>}
+        {!nextStatus && <small>Fulfilment complete · payout stays held until the return window closes.</small>}
+      </article>;
+    })}{!visibleSellerOrders.length && <section className="seller-empty large"><strong>{demoMode ? "Order operations preview" : "No matching orders"}</strong><small>{demoMode ? "Real verified customer orders will appear here after seller sign-in." : "Orders will move between these sections as you prepare and complete them."}</small></section>}</section>
+  </>;  else if (view === "inventory") content = <>
     {header("Inventory")}<section className="page-intro"><small>VARIANT CONTROL</small><h1>Stock by variant</h1><p>Update the exact size and colour. Every adjustment needs a reason.</p></section><section className="inventory-summary"><article><small>AVAILABLE</small><strong>{pieces}</strong></article><article><small>LOW STOCK</small><strong>{state.products.flatMap(p => p.variants).filter(v => v.quantity > 0 && v.quantity < 3).length}</strong></article><article><small>OUT OF STOCK</small><strong>{state.products.flatMap(p => p.variants).filter(v => v.quantity === 0).length}</strong></article></section><label className="stock-reason">Adjustment reason<select value={stockReason} onChange={e => setStockReason(e.target.value)}><option value="">Choose a reason</option><option>Stock received</option><option>Damaged</option><option>Returned</option><option>Correction</option><option>Transferred</option></select></label><section className="inventory-list">{state.products.flatMap(product => product.variants.map((variant, index) => <article key={`${product.id}-${index}`}><div><strong>{product.name}</strong><small>{variant.colour} / {variant.size}</small></div><span className={variant.quantity < 3 ? "low" : ""}>{variant.quantity} available</span><div><button aria-label={`Remove one ${product.name} ${variant.size}`} onClick={() => void adjustStock(product.id, index, -1)}>−</button><button aria-label={`Add one ${product.name} ${variant.size}`} onClick={() => void adjustStock(product.id, index, 1)}>+</button></div></article>))}{!state.products.length && <div className="seller-empty"><strong>No inventory yet</strong><small>Add your first product to begin tracking stock.</small></div>}</section>
   </>;
   else if (view === "payouts") content = <>

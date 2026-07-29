@@ -334,8 +334,8 @@ test("delivery orders track milestones while collection orders show pickup instr
   fireEvent.click(screen.getByRole("button", { name: "Go back" }));
   fireEvent.click(screen.getByRole("button", { name: /SM-COLLECT/ }));
   assert.ok(screen.getByRole("heading", { name: "Collection status" }));
-  assert.ok(screen.getByText("Collection code"));
-  assert.ok(screen.getByText("12 Independence Avenue"));
+  assert.ok(screen.getByText(/No courier tracking is used/));
+  assert.ok(screen.getByText("Ready to collect"));
   assert.equal(screen.queryByText("Collected by courier"), null);
   assert.equal(screen.queryByText(/Track delivery/i), null);
 });

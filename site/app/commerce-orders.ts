@@ -8,6 +8,7 @@ import {
   StockReservationError,
   type D1DatabaseLike,
 } from "./inventory-reservations";
+import { getCustomerFulfilments, type OrderFulfilment } from "./fulfilment-service";
 import { FULFILMENT_METHODS, OrderValidationError, type FulfilmentMethod } from "./order-creation";
 
 export type ResolvedOrderLine = {
@@ -46,6 +47,7 @@ export type CustomerOrder = {
   total: number;
   fulfilment: FulfilmentMethod;
   items: CartLine[];
+  fulfilments: OrderFulfilment[];
 };
 
 type PublicOrderRow = {
@@ -238,6 +240,7 @@ function projectRows(rows: PublicOrderRow[]) {
         total: row.total_cents / 100,
         fulfilment: fulfilmentFromRow(row),
         items: [],
+        fulfilments: [],
       });
     }
     if (!row.product_id || !row.variant_id || !row.variant_snapshot_json || !row.quantity) continue;
@@ -264,7 +267,17 @@ export async function getCustomerOrders(db: D1DatabaseLike, email: string, order
   const rows = orderId
     ? await statement.bind(email, orderId).all<PublicOrderRow>()
     : await statement.bind(email).all<PublicOrderRow>();
-  return projectRows(rows.results ?? []);
+  const orders = projectRows(rows.results ?? []);
+  if (!orders.length) return orders;
+  try {
+    const fulfilments = await getCustomerFulfilments(db, email, orderId);
+    const byOrder = new Map<string, OrderFulfilment[]>();
+    fulfilments.forEach(fulfilment => byOrder.set(fulfilment.orderId, [...(byOrder.get(fulfilment.orderId) ?? []), fulfilment]));
+    orders.forEach(order => { order.fulfilments = byOrder.get(order.id) ?? []; });
+  } catch {
+    // Keeps order history available during a rolling deploy before the fulfilment migration lands.
+  }
+  return orders;
 }
 
 export async function createCommerceOrder(db: D1DatabaseLike, input: {

@@ -299,7 +299,7 @@ export const shipments = sqliteTable("shipments", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   uniqueIndex("shipments_provider_tracking_idx").on(table.provider, table.trackingNumber),
-  index("shipments_seller_order_idx").on(table.sellerOrderId),
+  uniqueIndex("shipments_seller_order_unique_idx").on(table.sellerOrderId),
 ]);
 
 export const shipmentEvents = sqliteTable("shipment_events", {
