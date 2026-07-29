@@ -50,7 +50,6 @@ export async function POST(request: Request) {
     const wishlist = Array.isArray(body.wishlist)
       ? body.wishlist.filter((id): id is string => typeof id === "string" && /^p\d{1,4}$/.test(id)).slice(0, 500)
       : [];
-    const orders = Array.isArray(body.orders) ? body.orders.slice(0, 100) : [];
     const inputProfile = body.profile && typeof body.profile === "object" ? body.profile as Record<string, unknown> : {};
     const savedOutfits = Array.isArray(body.savedOutfits)
       ? body.savedOutfits.filter((id): id is string => typeof id === "string").slice(0, 100)
@@ -85,7 +84,7 @@ export async function POST(request: Request) {
       email,
       cartJson: JSON.stringify(cart),
       wishlistJson: JSON.stringify(wishlist),
-      ordersJson: JSON.stringify(orders),
+      ordersJson: existing?.ordersJson ?? "[]",
       profileJson: JSON.stringify(profile),
       updatedAt: new Date().toISOString(),
     };
@@ -93,18 +92,12 @@ export async function POST(request: Request) {
       target: customerState.email,
       set: values,
     });
-    const previousOrders = existing ? safeJson(existing.ordersJson, []) : [];
     const previousCart = existing ? safeJson(existing.cartJson, []) : [];
     const previousWishlist = existing ? safeJson(existing.wishlistJson, []) : [];
     let event: ActivityType | null = null;
     let targetType: string | null = null;
     let targetId: string | null = null;
-    if (Array.isArray(previousOrders) && orders.length > previousOrders.length) {
-      const latest = orders[0] as { id?: unknown } | undefined;
-      event = "order_placed";
-      targetType = "order";
-      targetId = typeof latest?.id === "string" ? latest.id : null;
-    } else if (Array.isArray(previousCart) && cart.length > previousCart.length) {
+    if (Array.isArray(previousCart) && cart.length > previousCart.length) {
       const latest = cart[cart.length - 1] as { productId?: unknown } | undefined;
       event = "cart_added";
       targetType = "product";
