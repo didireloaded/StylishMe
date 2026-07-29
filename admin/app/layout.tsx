@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "StylishMe Admin",
   description: "Private marketplace operations for StylishMe.",
+  icons: { icon: "/favicon.svg" },
   robots: { index: false, follow: false, nocache: true },
 };
 
