@@ -30,7 +30,8 @@ test("contains the complete StylishMe shopping journey", async () => {
   assert.match(app, /aria-label=\{`Open cart, \$\{cartCount\} items`\}/);
   assert.match(app, /\["Saved outfits", "outfits"\]/i);
   assert.match(app, /Add to cart ·/);
-  assert.match(app, /Place sandbox order/);
+  assert.match(app, /Continue to secure payment/);
+  assert.match(app, /Place preview order/);
   assert.match(app, /Order tracking/);
   assert.match(app, /Fit Passport/);
   assert.match(productCatalog, /Made in Namibia/);

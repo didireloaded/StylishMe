@@ -39,7 +39,7 @@ test("signed-in checkout awaits the server order and exposes processing feedback
   const app = readFileSync(new URL("../app/StylishMeApp.tsx", import.meta.url), "utf8");
 
   assert.match(app, /fetch\("\/api\/orders"/);
-  assert.match(app, /disabled=\{placingOrder \|\| checkoutNeedsAddress\}/);
+  assert.match(app, /disabled=\{placingOrder \|\| checkoutNeedsAddress \|\| \(!demoMode/);
   assert.match(app, /aria-busy=\{placingOrder\}/);
   assert.match(app, /if \(demoMode\)/);
   assert.doesNotMatch(app, /1100 \+ orders\.length/);
