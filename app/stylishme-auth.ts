@@ -61,26 +61,48 @@ export async function destroySession(token: string | undefined) {
 
 export const expiredSessionCookie = () => `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
 
-export async function consumeAuthAttempt(request: Request, email: string, limit: number) {
+type AuthAttemptScope = "login" | "signup";
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_COUNTER_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+async function incrementAuthAttempt(
+  env: Awaited<ReturnType<typeof runtime>>,
+  key: string,
+  now: string,
+  windowCutoff: string,
+) {
+  const row = await env.DB.prepare("INSERT INTO auth_attempts (attempt_key, attempt_count, window_start) VALUES (?, 1, ?) ON CONFLICT(attempt_key) DO UPDATE SET attempt_count = CASE WHEN window_start < ? THEN 1 ELSE attempt_count + 1 END, window_start = CASE WHEN window_start < ? THEN excluded.window_start ELSE window_start END RETURNING attempt_count")
+    .bind(key, now, windowCutoff, windowCutoff)
+    .first() as { attempt_count: number } | null;
+  return Number(row?.attempt_count ?? Number.MAX_SAFE_INTEGER);
+}
+
+export async function consumeAuthAttempt(request: Request, email: string, limit: number, scope: "login" | "signup" = "login") {
   await ensureAuthTables();
   const env = await runtime();
   const address = request.headers.get("cf-connecting-ip") ?? "unknown";
-  const key = await digest(`${address}:${email.toLowerCase()}`);
-  const now = Date.now();
-  const row = await env.DB.prepare("SELECT attempt_count, window_start FROM auth_attempts WHERE attempt_key = ?").bind(key).first() as { attempt_count: number; window_start: string } | null;
-  const active = row && now - new Date(row.window_start).getTime() < 15 * 60 * 1000;
-  const count = active ? row.attempt_count + 1 : 1;
-  const windowStart = active ? row.window_start : new Date(now).toISOString();
-  await env.DB.prepare("INSERT INTO auth_attempts (attempt_key, attempt_count, window_start) VALUES (?, ?, ?) ON CONFLICT(attempt_key) DO UPDATE SET attempt_count = excluded.attempt_count, window_start = excluded.window_start").bind(key, count, windowStart).run();
-  return count <= limit;
+  const normalizedEmail = email.trim().toLowerCase();
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
+  const windowCutoff = new Date(nowMs - AUTH_WINDOW_MS).toISOString();
+  const identityKey = await digest(`${scope}:identity:${address}:${normalizedEmail}`);
+  const ipKey = await digest(`${scope}:ip:${address}`);
+  const ipLimit = scope === "signup" ? 20 : 100;
+  const [identityCount, ipCount] = await Promise.all([
+    incrementAuthAttempt(env, identityKey, now, windowCutoff),
+    incrementAuthAttempt(env, ipKey, now, windowCutoff),
+  ]);
+  const retentionCutoff = new Date(nowMs - AUTH_COUNTER_RETENTION_MS).toISOString();
+  await env.DB.prepare("DELETE FROM auth_attempts WHERE window_start < ?").bind(retentionCutoff).run().catch(() => undefined);
+  return identityCount <= limit && ipCount <= ipLimit;
 }
 
-export async function clearAuthAttempts(request: Request, email: string) {
+export async function clearAuthAttempts(request: Request, email: string, scope: AuthAttemptScope = "login") {
   const env = await runtime();
   const address = request.headers.get("cf-connecting-ip") ?? "unknown";
-  await env.DB.prepare("DELETE FROM auth_attempts WHERE attempt_key = ?").bind(await digest(`${address}:${email.toLowerCase()}`)).run();
+  const key = await digest(`${scope}:identity:${address}:${email.trim().toLowerCase()}`);
+  await env.DB.prepare("DELETE FROM auth_attempts WHERE attempt_key = ?").bind(key).run();
 }
-
 export async function getStylishMeUser(): Promise<StylishMeUser | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;

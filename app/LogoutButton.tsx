@@ -11,15 +11,16 @@ export default function LogoutButton({ email }: { email: string }) {
     if (busy) return;
     setBusy(true);
     setError("");
-    clearPrivateAccountState(window.localStorage, email);
-    window.sessionStorage.removeItem("stylishme-session-id");
-    if ("caches" in window) {
-      const names = await caches.keys().catch(() => []);
-      await Promise.all(names.filter(name => name.startsWith("stylishme-private-")).map(name => caches.delete(name)));
-    }
+
     try {
       const response = await fetch("/api/auth/logout", { method: "POST", headers: { "content-type": "application/json" } });
       if (!response.ok) throw new Error();
+      clearPrivateAccountState(window.localStorage, email);
+      window.sessionStorage.removeItem("stylishme-session-id");
+      if ("caches" in window) {
+        const names = await caches.keys().catch(() => []);
+        await Promise.all(names.filter(name => name.startsWith("stylishme-private-")).map(name => caches.delete(name)));
+      }
       window.location.replace("/login?reason=logged-out");
     } catch {
       setBusy(false);

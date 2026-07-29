@@ -8,5 +8,5 @@ export async function GET() {
   if (!row) return new Response(null, { status: 404 });
   const object = await env.MEDIA.get(row.avatar_key);
   if (!object) return new Response(null, { status: 404 });
-  return new Response(object.body, { headers: { "content-type": object.httpMetadata?.contentType ?? "image/webp", "cache-control": "private, max-age=3600", "x-content-type-options": "nosniff" } });
+  return new Response(object.body, { headers: { "content-type": object.httpMetadata?.contentType ?? "image/webp", "cache-control": "private, no-store", "x-content-type-options": "nosniff" } });
 }
