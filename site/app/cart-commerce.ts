@@ -2,6 +2,7 @@ import type { Product } from "./product-catalog";
 
 export type CartLine = {
   productId: string;
+  variantId?: string;
   size: string;
   color: string;
   quantity: number;
@@ -24,6 +25,17 @@ export function getFirstStockedSize(product: Pick<Product, "sizes" | "stock">) {
   return index < 0 ? null : product.sizes[index];
 }
 
+export function cartLineForSelection(product: Product, size: string, color: string, quantity = 1): CartLine | null {
+  if (product.variantOptions?.length) {
+    const variant = product.variantOptions.find((option) => option.size === size && option.displayColor === color && option.stock >= quantity);
+    if (!variant) return null;
+    return { productId: product.id, variantId: variant.variantId, size, color, quantity };
+  }
+  return product.sizes.includes(size) && product.colors.includes(color)
+    ? { productId: product.id, size, color, quantity }
+    : null;
+}
+
 export function mergeCartLinesWithinStock(
   current: readonly CartLine[],
   requested: readonly CartLine[],
@@ -36,15 +48,21 @@ export function mergeCartLinesWithinStock(
 
   for (const request of requested) {
     const product = productById.get(request.productId);
-    if (!product || !product.colors.includes(request.color) || !product.sizes.includes(request.size)) {
+    const variant = request.variantId
+      ? product?.variantOptions?.find((option) => option.variantId === request.variantId
+        && option.size === request.size && option.displayColor === request.color)
+      : undefined;
+    if (!product || !product.colors.includes(request.color) || !product.sizes.includes(request.size)
+      || (request.variantId && !variant) || (product.variantOptions?.length && !request.variantId)) {
       invalid += request.quantity;
       continue;
     }
 
-    const stock = getSizeStock(product, request.size);
+    const stock = variant?.stock ?? getSizeStock(product, request.size);
     const matchIndex = lines.findIndex((line) => line.productId === request.productId
       && line.size === request.size
-      && line.color === request.color);
+      && line.color === request.color
+      && line.variantId === request.variantId);
     const existing = matchIndex >= 0 ? lines[matchIndex].quantity : 0;
     const quantityToAdd = Math.max(0, Math.min(request.quantity, stock - existing));
     const quantityCapped = request.quantity - quantityToAdd;

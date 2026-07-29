@@ -12,7 +12,7 @@ import CustomerStoryComposer from "./CustomerStoryComposer";
 import CustomerStoryViewer from "./CustomerStoryViewer";
 import LogoutButton from "./LogoutButton";
 import TryOnView from "./TryOnView";
-import { getFirstStockedSize, getSizeStock, mergeCartLinesWithinStock, type CartLine } from "./cart-commerce";
+import { cartLineForSelection, getFirstStockedSize, getSizeStock, mergeCartLinesWithinStock, type CartLine } from "./cart-commerce";
 import { getOutfitTotal, OUTFITS, OUTFIT_STORIES } from "./outfit-catalog";
 import { buildProduct, IMG, type Product } from "./product-catalog";
 import { toCustomerProduct } from "./customer-catalogue";
@@ -213,6 +213,7 @@ export default function StylishMeApp({
   const [storyComposerOpen, setStoryComposerOpen] = useState(false);
   const [activeCustomerStoryId, setActiveCustomerStoryId] = useState<string | null>(null);
   const storyTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const checkoutKeyRef = useRef("");
   const [selectedOutfitId, setSelectedOutfitId] = useState(OUTFITS[0].id);
   const [selectedDesigner, setSelectedDesigner] = useState("Omutima Studio");
   const [designerReturnView, setDesignerReturnView] = useState<View>("home");
@@ -454,7 +455,12 @@ export default function StylishMeApp({
     setToast(savedOutfits.includes(id) ? "Removed from saved outfits" : "Outfit saved");
   };
   const addProductVariantToCart = (product: Product, size: string, color: string) => {
-    const result = mergeCartLinesWithinStock(cart, [{ productId: product.id, size, color, quantity: 1 }], productById);
+    const requested = cartLineForSelection(product, size, color, 1);
+    if (!requested) {
+      setToast("That size and colour combination is unavailable");
+      return;
+    }
+    const result = mergeCartLinesWithinStock(cart, [requested], productById);
     if (result.invalid) {
       setToast("Choose an available size and colour");
       return;
@@ -602,9 +608,11 @@ export default function StylishMeApp({
     }
     setPlacingOrder(true);
     try {
+      const checkoutKey = checkoutKeyRef.current || crypto.randomUUID();
+      checkoutKeyRef.current = checkoutKey;
       const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "idempotency-key": checkoutKey },
         body: JSON.stringify({ fulfilment }),
       });
       const body = await response.json().catch(() => ({})) as { order?: Order; error?: string };
@@ -612,10 +620,11 @@ export default function StylishMeApp({
         window.location.replace(`/login?reason=expired&returnTo=${encodeURIComponent("/")}`);
         return;
       }
-      if (!response.ok || !body.order) throw new Error(body.error ?? "Unable to place the sandbox order");
+      if (!response.ok || !body.order) throw new Error(body.error ?? "Unable to prepare your order");
       finishOrder(body.order);
+      checkoutKeyRef.current = "";
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Unable to place the sandbox order");
+      setToast(error instanceof Error ? error.message : "Unable to prepare your order");
     } finally {
       setPlacingOrder(false);
     }

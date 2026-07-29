@@ -18,6 +18,7 @@ export type Product = {
   pickup: boolean;
   madeLocal?: boolean;
   madeToOrder?: boolean;
+  variantOptions?: Array<{ variantId: string; size: string; colour: string; displayColor: string; stock: number }>;
   sellerType: "Designer" | "Brand & boutique" | "Merch";
 };
 

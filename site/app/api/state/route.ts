@@ -1,8 +1,10 @@
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { customerState } from "../../../db/schema";
 import { recordActivity, type ActivityType } from "../../activity";
 import { getStylishMeUser } from "../../stylishme-auth";
+import { getCustomerOrders } from "../../commerce-orders";
 
 const safeJson = (value: string, fallback: unknown) => {
   try { return JSON.parse(value); } catch { return fallback; }
@@ -26,10 +28,12 @@ export async function GET(request: Request) {
     const savedOutfits = Array.isArray(profile.savedOutfits)
       ? profile.savedOutfits.filter((id): id is string => typeof id === "string")
       : [];
+    const normalizedOrders = await getCustomerOrders(env.DB, email);
+    const legacyOrders = safeJson(row.ordersJson, []);
     return Response.json({ state: {
       cart: safeJson(row.cartJson, []),
       wishlist: safeJson(row.wishlistJson, []),
-      orders: safeJson(row.ordersJson, []),
+      orders: normalizedOrders.length ? normalizedOrders : legacyOrders,
       profile,
       savedOutfits,
     }}, { headers: { "cache-control": "no-store" } });

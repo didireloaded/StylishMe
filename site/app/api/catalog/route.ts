@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, notLike } from "drizzle-orm";
 
 import { getDb } from "../../../db";
 import { catalogProducts, inventoryVariants } from "../../../db/schema";
@@ -21,9 +21,10 @@ const metadata = (value: string): PublicMetadata => {
 export async function GET(request: Request) {
   try {
     const storeSlug = new URL(request.url).searchParams.get("store");
+    const publishedSellerProduct = and(eq(catalogProducts.status, "published"), notLike(catalogProducts.sellerId, "launch:%"));
     const condition = storeSlug
-      ? and(eq(catalogProducts.status, "published"), eq(catalogProducts.storeSlug, storeSlug))
-      : eq(catalogProducts.status, "published");
+      ? and(publishedSellerProduct, eq(catalogProducts.storeSlug, storeSlug))
+      : publishedSellerProduct;
     const rows = await getDb().select({
       id: catalogProducts.id,
       storeSlug: catalogProducts.storeSlug,

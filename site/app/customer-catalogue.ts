@@ -1,6 +1,6 @@
 import type { Product } from "./product-catalog";
 
-type PublicVariant = { size?: unknown; colour?: unknown; quantity?: unknown };
+type PublicVariant = { id?: unknown; size?: unknown; colour?: unknown; quantity?: unknown };
 type PublicProduct = {
   id?: unknown;
   name?: unknown;
@@ -51,11 +51,15 @@ export function toCustomerProduct(value: unknown): Product | null {
   const variants = Array.isArray(input.variants) ? input.variants as PublicVariant[] : [];
   const sizeStock = new Map<string, number>();
   const colours: string[] = [];
+  const variantOptions: NonNullable<Product["variantOptions"]> = [];
   for (const variant of variants) {
     const size = text(variant.size);
     const colour = text(variant.colour);
     const quantity = Math.max(0, Math.floor(Number(variant.quantity) || 0));
-    if (!size || !colour) continue;
+    const variantId = text(variant.id);
+    if (!variantId || !size || !colour) continue;
+    const displayColor = colourHex[colour.toLowerCase()] ?? "#e9d6bd";
+    variantOptions.push({ variantId, size, colour, displayColor, stock: quantity });
     sizeStock.set(size, (sizeStock.get(size) ?? 0) + quantity);
     if (!colours.includes(colour)) colours.push(colour);
   }
@@ -85,6 +89,7 @@ export function toCustomerProduct(value: unknown): Product | null {
     colors: colours.map((colour) => colourHex[colour.toLowerCase()] ?? "#e9d6bd"),
     sizes,
     stock: sizes.map((size) => sizeStock.get(size) ?? 0),
+    variantOptions,
     delivery: deliveryMethods.length ? deliveryMethods.join(" · ") : "Delivery options shown at checkout",
     pickup: deliveryMethods.some((method) => /collection|pickup/i.test(method)),
     madeLocal: sellerType === "Designer",
