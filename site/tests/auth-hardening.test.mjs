@@ -44,6 +44,7 @@ test("logout uses replacement navigation, progress, and private cache clearing",
   assert.match(source, /caches\.keys/);
   assert.match(source, /window\.location\.replace/);
   assert.match(source, /\/login\?reason=logged-out/);
+  assert.ok(source.indexOf('fetch("/api/auth/logout"') < source.indexOf("clearPrivateAccountState(window.localStorage"));
 });
 
 test("login gives explicit logout feedback and never offers guest access", async () => {
@@ -114,4 +115,40 @@ test("seller data APIs enforce the seller role on the backend", async () => {
   const route = await read("app/api/seller-state/route.ts");
   assert.match(route, /requireAccountRole\(user\.email, "seller"\)/);
   assert.match(route, /status: 403/);
+});
+test("logout reports revocation failure without clearing the browser session", async () => {
+  const route = await read("app/api/auth/logout/route.ts");
+  assert.doesNotMatch(route, /destroySession\([^)]*\)\.catch/);
+  assert.match(route, /status: 503/);
+  assert.match(route, /Unable to sign out/);
+});
+
+test("private profile photos are never reused from the browser cache", async () => {
+  const route = await read("app/api/auth/avatar/route.ts");
+  assert.match(route, /private, no-store/);
+  assert.doesNotMatch(route, /max-age/);
+});
+
+test("auth throttling is atomic, scoped, and cleans up stale counters", async () => {
+  const [auth, login, signup] = await Promise.all([
+    read("app/stylishme-auth.ts"), read("app/api/auth/login/route.ts"), read("app/api/auth/signup/route.ts"),
+  ]);
+  assert.match(auth, /ON CONFLICT\(attempt_key\) DO UPDATE/);
+  assert.match(auth, /attempt_count = CASE/);
+  assert.match(auth, /RETURNING attempt_count/);
+  assert.match(auth, /DELETE FROM auth_attempts WHERE window_start/);
+  assert.match(auth, /scope: "login" \| "signup"/);
+  assert.match(login, /consumeAuthAttempt\(request, email, 10, "login"\)/);
+  assert.match(signup, /consumeAuthAttempt\(request, email, 5, "signup"\)/);
+  assert.match(login + signup, /content-length/);
+  assert.match(login + signup, /TextEncoder/);
+});
+
+test("account reset migrations never erase shopping, seller, or try-on records", async () => {
+  const [legacyReset, sessionReset] = await Promise.all([
+    read("drizzle/0003_reset_accounts.sql"), read("drizzle/0006_clear_active_sessions.sql").catch(() => ""),
+  ]);
+  assert.doesNotMatch(legacyReset, /DELETE FROM `(customer_state|seller_state|try_on_usage)`/);
+  assert.match(sessionReset, /DELETE FROM `auth_sessions`/);
+  assert.doesNotMatch(sessionReset, /customer_state|seller_state|try_on_usage/);
 });

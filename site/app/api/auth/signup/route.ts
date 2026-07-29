@@ -7,14 +7,17 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(request: Request) {
   let avatarKey = "";
   try {
+    const contentLength = Number(request.headers.get("content-length") ?? "0");
+    if (contentLength > 6 * 1024 * 1024) return Response.json({ error: "Account request is too large" }, { status: 413 });
     const form = await request.formData();
     const name = String(form.get("name") ?? "").trim().replace(/[\u0000-\u001f]/g, "").slice(0, 80);
     const email = String(form.get("email") ?? "").trim().toLowerCase().slice(0, 180);
     const password = String(form.get("password") ?? "");
+    if (new TextEncoder().encode(password).byteLength > 256) return Response.json({ error: "Password is too long" }, { status: 400 });
     const role = form.get("role") === "seller" ? "seller" : "customer";
     const returnTo = safeRelativeReturnPath(String(form.get("returnTo") ?? "/"));
     const avatar = form.get("avatar");
-    if (!await consumeAuthAttempt(request, email, 5)) return Response.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
+    if (!await consumeAuthAttempt(request, email, 5, "signup")) return Response.json({ error: "Too many attempts. Try again in 15 minutes." }, { status: 429 });
     if (name.length < 2) return Response.json({ error: "Enter your full name" }, { status: 400 });
     if (!emailPattern.test(email)) return Response.json({ error: "Enter a valid email address" }, { status: 400 });
     if (password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return Response.json({ error: "Use at least 10 characters with a letter and number" }, { status: 400 });
