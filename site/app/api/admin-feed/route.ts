@@ -269,7 +269,7 @@ export async function GET(request: Request) {
       targetType: event.targetType,
       targetId: event.targetId,
       createdAt: event.createdAt,
-    })),
+    })).slice(0, 7),
   }, {
     headers: {
       "cache-control": "no-store, private",

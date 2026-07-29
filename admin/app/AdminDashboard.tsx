@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { sanitizeCsvCell } from "./csv-security";
+
 type View = "overview" | "customers" | "sellers" | "orders" | "products" | "collections" | "revenue" | "payouts" | "promotions" | "reports" | "traffic" | "reviews" | "support" | "notifications" | "staff" | "settings";
 type Seller = { storeName: string; type: string; city: string; approved: boolean; products: number; liveProducts: number; stock: number; lowStock: number; orderValue: number; orders: number; updatedAt: string };
 type Order = { id: string; date: string; status: string; total: number; fulfilment: string; itemCount: number; city: string; sellerNames: string[] };
@@ -97,7 +99,7 @@ export default function AdminDashboard({ operatorName }: { operatorName: string 
     ].slice(0, 8);
   }, [feed, query]);
   const go = (next: View) => { setView(next); setDrawer(false); setQuery(""); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const download = () => { const rows = [["Order", "Date", "Status", "Fulfilment", "Town", "Sellers", "Recorded value"], ...visibleOrders.map(order => [order.id, order.date, order.status, order.fulfilment, order.city, order.sellerNames.join(" | "), order.total])]; const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n"); const anchor = document.createElement("a"); anchor.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); anchor.download = `stylishme-orders-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(anchor.href); };
+  const download = () => { const rows = [["Order", "Date", "Status", "Fulfilment", "Town", "Sellers", "Recorded value"], ...visibleOrders.map(order => [order.id, order.date, order.status, order.fulfilment, order.city, order.sellerNames.join(" | "), order.total])]; const csv = rows.map(row => row.map(value => `"${sanitizeCsvCell(value).replaceAll('"', '""')}"`).join(",")).join("\n"); const anchor = document.createElement("a"); anchor.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); anchor.download = `stylishme-orders-${new Date().toISOString().slice(0, 10)}.csv`; anchor.click(); URL.revokeObjectURL(anchor.href); };
 
   let content: React.ReactNode;
   if (view === "overview") content = <>

@@ -76,3 +76,34 @@ test("activity records use one-way identifiers and the admin response omits them
   const responseMapping = feed.slice(feed.indexOf("activity: events.map"));
   assert.doesNotMatch(responseMapping, /actorHash/);
 });
+test("owner dashboard enforces an explicit server-side owner allowlist", async () => {
+  const [auth, page, env] = await Promise.all([
+    read("app/chatgpt-auth.ts"), read("app/page.tsx"), read(".env.example"),
+  ]);
+  assert.match(auth, /STYLISHME_ADMIN_OWNER_EMAILS/);
+  assert.match(auth, /allowedOwnerEmails/);
+  assert.match(page, /Access restricted/);
+  assert.match(env, /STYLISHME_ADMIN_OWNER_EMAILS/);
+});
+
+test("CSV exports neutralize spreadsheet formulas", async () => {
+  const csvSecurity = await import("../app/csv-security.ts").catch(() => ({ sanitizeCsvCell: (value) => String(value) }));
+  assert.equal(csvSecurity.sanitizeCsvCell("=2+2"), "'=2+2");
+  assert.equal(csvSecurity.sanitizeCsvCell("  @SUM(A1:A2)"), "'  @SUM(A1:A2)");
+  assert.equal(csvSecurity.sanitizeCsvCell("SM-2026-1"), "SM-2026-1");
+  const dashboard = await read("app/AdminDashboard.tsx");
+  assert.match(dashboard, /sanitizeCsvCell/);
+});
+
+test("the browser receives only the recent activity rows it renders", async () => {
+  const feed = await read("../site/app/api/admin-feed/route.ts");
+  const responseMapping = feed.slice(feed.indexOf("activity: events.map"));
+  assert.match(responseMapping, /\.slice\(0, 7\)/);
+});
+test("both deployments document the shared privacy-safe analytics connection", async () => {
+  const [adminEnv, siteEnv] = await Promise.all([read(".env.example"), read("../site/.env.example")]);
+  assert.match(adminEnv, /STYLISHME_ADMIN_API_KEY/);
+  assert.match(adminEnv, /STYLISHME_ADMIN_OWNER_EMAILS/);
+  assert.match(siteEnv, /STYLISHME_ADMIN_API_KEY/);
+  assert.match(siteEnv, /ACTIVITY_HASH_SALT/);
+});
