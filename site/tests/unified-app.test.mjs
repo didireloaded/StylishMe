@@ -95,7 +95,8 @@ test("seller workspace exposes phase-one operations without invented finance dat
     assert.match(seller, new RegExp(area));
   }
   assert.match(seller, /Stock by variant/);
-  assert.match(seller, /Payment provider is not connected/);
+  assert.match(seller, /verified customer payments/);
+  assert.match(seller, /\/api\/seller-settlements/);
   assert.match(seller, /Every adjustment needs a reason/);
   assert.doesNotMatch(seller, /N\$12,640/);
   assert.doesNotMatch(seller, /1,482/);

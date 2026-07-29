@@ -7,6 +7,7 @@ import {
   verifyDpoPayment,
 } from "./dpo-pay";
 import { confirmReservation, type D1DatabaseLike, releaseOrderReservations } from "./inventory-reservations";
+import { paidOrderLedgerStatements, refundLedgerStatements } from "./settlement-ledger";
 
 type PaymentOrderRow = {
   id: string;
@@ -161,6 +162,7 @@ export async function reconcileDpoPayment(db: D1DatabaseLike, config: DpoConfig,
         .bind(timestamp, attempt.order_id),
       db.prepare("UPDATE seller_orders SET status = 'new', updated_at = ? WHERE order_id = ? AND status = 'awaiting_payment'")
         .bind(timestamp, attempt.order_id),
+      ...paidOrderLedgerStatements(db, attempt.order_id, attempt.id, timestamp),
     ]);
     return { status: "paid" as const, orderId: attempt.order_id };
   }
@@ -185,6 +187,7 @@ export async function reconcileDpoPayment(db: D1DatabaseLike, config: DpoConfig,
 
 export async function createDpoRefund(db: D1DatabaseLike, config: DpoConfig, input: {
   orderId: string;
+  sellerOrderId: string;
   amountCents: number;
   reason: string;
   idempotencyKey: string;
@@ -200,20 +203,22 @@ export async function createDpoRefund(db: D1DatabaseLike, config: DpoConfig, inp
   const existing = await db.prepare("SELECT id, status, amount_cents FROM refunds WHERE idempotency_key = ? LIMIT 1")
     .bind(input.idempotencyKey).first<{ id: string; status: string; amount_cents: number }>();
   if (existing) return { refundId: existing.id, status: existing.status, amountCents: existing.amount_cents, reused: true };
-  const payment = await db.prepare(`SELECT p.id, p.provider_reference, p.amount_cents,
-      COALESCE((SELECT SUM(r.amount_cents) FROM refunds r WHERE r.payment_attempt_id = p.id AND r.status IN ('succeeded','pending_review')), 0) AS refunded_cents
-    FROM payment_attempts p JOIN commerce_orders o ON o.id = p.order_id
-    WHERE p.order_id = ? AND p.provider = 'dpo' AND p.status = 'paid' AND o.payment_status IN ('paid','partially_refunded') LIMIT 1`)
-    .bind(input.orderId).first<{ id: string; provider_reference: string; amount_cents: number; refunded_cents: number }>();
+  const payment = await db.prepare(`SELECT p.id, p.provider_reference, p.amount_cents, so.subtotal_cents, so.commission_cents,
+      COALESCE((SELECT SUM(r.amount_cents) FROM refunds r WHERE r.payment_attempt_id = p.id AND r.status IN ('succeeded','pending_review')), 0) AS total_refunded_cents,
+      COALESCE((SELECT SUM(r.amount_cents) FROM refunds r WHERE r.payment_attempt_id = p.id AND r.seller_order_id = so.id AND r.status IN ('succeeded','pending_review')), 0) AS seller_refunded_cents
+    FROM payment_attempts p JOIN commerce_orders o ON o.id = p.order_id JOIN seller_orders so ON so.order_id = o.id
+    WHERE p.order_id = ? AND so.id = ? AND p.provider = 'dpo' AND p.status = 'paid'
+      AND o.payment_status IN ('paid','partially_refunded') LIMIT 1`)
+    .bind(input.orderId, input.sellerOrderId).first<{ id: string; provider_reference: string; amount_cents: number; subtotal_cents: number; commission_cents: number; total_refunded_cents: number; seller_refunded_cents: number }>();
   if (!payment?.provider_reference) throw new PaymentValidationError("A verified paid transaction was not found");
-  if (input.amountCents > payment.amount_cents - Number(payment.refunded_cents ?? 0)) throw new PaymentValidationError("Refund exceeds the remaining paid amount");
+  if (input.amountCents > payment.subtotal_cents - Number(payment.seller_refunded_cents ?? 0)) throw new PaymentValidationError("Refund exceeds the remaining seller-order amount");
 
   const refundId = crypto.randomUUID();
   const timestamp = (input.now ?? new Date()).toISOString();
   await db.prepare(`INSERT INTO refunds
-    (id, order_id, payment_attempt_id, idempotency_key, amount_cents, reason, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, 'requested', ?, ?)`)
-    .bind(refundId, input.orderId, payment.id, input.idempotencyKey, input.amountCents, reason, timestamp, timestamp).run();
+    (id, order_id, payment_attempt_id, seller_order_id, idempotency_key, amount_cents, reason, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?)`)
+    .bind(refundId, input.orderId, payment.id, input.sellerOrderId, input.idempotencyKey, input.amountCents, reason, timestamp, timestamp).run();
   try {
     const result = await refundDpoPayment(config, {
       transactionToken: payment.provider_reference,
@@ -223,12 +228,15 @@ export async function createDpoRefund(db: D1DatabaseLike, config: DpoConfig, inp
     }, input.fetcher);
     const succeeded = result.result === "000";
     const status = succeeded ? "succeeded" : "failed";
-    const totalRefunded = Number(payment.refunded_cents ?? 0) + (succeeded ? input.amountCents : 0);
+    const totalRefunded = Number(payment.total_refunded_cents ?? 0) + (succeeded ? input.amountCents : 0);
+    const commissionDebitCents = Math.min(input.amountCents, Math.round(input.amountCents * payment.commission_cents / Math.max(1, payment.subtotal_cents)));
+    const sellerDebitCents = input.amountCents - commissionDebitCents;
     await db.batch([
       db.prepare("UPDATE refunds SET status = ?, provider_reference = ?, updated_at = ? WHERE id = ?")
         .bind(status, result.transactionReference ?? null, timestamp, refundId),
       ...(succeeded ? [db.prepare("UPDATE commerce_orders SET payment_status = ?, status = CASE WHEN ? = total_cents THEN 'refunded' ELSE status END, updated_at = ? WHERE id = ?")
         .bind(totalRefunded === payment.amount_cents ? "refunded" : "partially_refunded", totalRefunded, timestamp, input.orderId)] : []),
+      ...(succeeded ? refundLedgerStatements(db, { sellerOrderId: input.sellerOrderId, refundId, sellerDebitCents, commissionDebitCents, now: timestamp }) : []),
     ]);
     if (!succeeded) throw new PaymentUnavailableError(result.explanation || "Refund was declined by the payment provider");
     return { refundId, status, amountCents: input.amountCents, reused: false };

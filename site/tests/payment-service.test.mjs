@@ -18,6 +18,7 @@ function database({ orderId = "SM-2026-PAY1", reservationStatus = "active" } = {
   const db = new SqliteD1();
   createCommerceTables(db);
   db.database.exec(`
+    ALTER TABLE seller_orders ADD COLUMN payout_eligible_at TEXT;
     CREATE TABLE payment_attempts (
       id TEXT PRIMARY KEY, order_id TEXT NOT NULL, provider TEXT NOT NULL, provider_reference TEXT,
       idempotency_key TEXT NOT NULL UNIQUE, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL,
@@ -29,6 +30,15 @@ function database({ orderId = "SM-2026-PAY1", reservationStatus = "active" } = {
       idempotency_key TEXT NOT NULL UNIQUE, provider_reference TEXT, amount_cents INTEGER NOT NULL,
       reason TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
+    CREATE TABLE payout_batches (
+      id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE, amount_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL, status TEXT NOT NULL, provider_reference TEXT, created_at TEXT NOT NULL, released_at TEXT
+    );
+    CREATE TABLE ledger_entries (
+      id TEXT PRIMARY KEY, seller_order_id TEXT NOT NULL, payout_batch_id TEXT, entry_type TEXT NOT NULL, amount_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL, source_type TEXT NOT NULL, source_id TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL,
+      UNIQUE(source_type, source_id, entry_type)
+    );
   `);
   const now = "2026-07-29T10:00:00.000Z";
   db.database.prepare("INSERT INTO seller_state VALUES (?, ?, ?, ?, ?, ?)").run("seller-1", "seller@example.com", 1, "Omutima", "{}", now);
@@ -38,8 +48,8 @@ function database({ orderId = "SM-2026-PAY1", reservationStatus = "active" } = {
     .run("variant-1", "product-1", "M", "Coral", "SKU-1", 3, reservationStatus === "active" ? 1 : 0, 0, now);
   db.database.prepare("INSERT INTO commerce_orders VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .run(orderId, "customer@example.com", `checkout-${orderId}`, "NAD", 10000, 6500, 16500, "pending_payment", "unpaid", "delivery", "{}", null, "2026-07-29T10:15:00.000Z", now, now);
-  db.database.prepare("INSERT INTO seller_orders VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .run("seller-order-1", orderId, "seller-1", 10000, 1200, 8800, "awaiting_payment", now, now);
+  db.database.prepare("INSERT INTO seller_orders VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run("seller-order-1", orderId, "seller-1", 10000, 1200, 8800, "awaiting_payment", now, now, null);
   db.database.prepare("INSERT INTO inventory_reservations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .run("reservation-1", `reserve-${orderId}`, orderId, "variant-1", 1, reservationStatus, "2026-07-29T10:15:00.000Z", now, now);
   return db;
@@ -70,6 +80,7 @@ test("verified payment confirms stock exactly once even when DPO calls back twic
   assert.equal(db.database.prepare("SELECT status FROM inventory_reservations").get().status, "confirmed");
   assert.deepEqual({ ...db.database.prepare("SELECT status, payment_status FROM commerce_orders").get() }, { status: "confirmed", payment_status: "paid" });
   assert.equal(db.database.prepare("SELECT status FROM seller_orders").get().status, "new");
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM ledger_entries").get().count, 2);
   db.close();
 });
 
@@ -95,13 +106,14 @@ test("refunds are bounded by paid amount and idempotent", async () => {
   db.database.prepare("UPDATE commerce_orders SET status='confirmed', payment_status='paid'").run();
   db.database.prepare("INSERT INTO payment_attempts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
     .run("payment-1", "SM-2026-PAY1", "dpo", "dpo-token-1", "dpo:SM-2026-PAY1", 16500, "NAD", "paid", now, now, now);
-  const input = { orderId: "SM-2026-PAY1", amountCents: 5000, reason: "Approved return", idempotencyKey: "refund-request-1234", now: new Date(now) };
+  const input = { orderId: "SM-2026-PAY1", sellerOrderId: "seller-order-1", amountCents: 5000, reason: "Approved return", idempotencyKey: "refund-request-1234", now: new Date(now) };
   const first = await createDpoRefund(db, config, { ...input, fetcher: xmlResponse("<API3G><Result>000</Result><ResultExplanation>Refund successful</ResultExplanation></API3G>") });
   const second = await createDpoRefund(db, config, { ...input, fetcher: async () => { throw new Error("must not refund twice"); } });
   assert.equal(first.status, "succeeded");
   assert.equal(second.reused, true);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM refunds").get().count, 1);
   assert.equal(db.database.prepare("SELECT payment_status FROM commerce_orders").get().payment_status, "partially_refunded");
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM ledger_entries WHERE entry_type LIKE '%refund%' OR entry_type LIKE '%reversal%'").get().count, 2);
   await assert.rejects(() => createDpoRefund(db, config, { ...input, amountCents: 12000, idempotencyKey: "refund-request-5678", fetcher: xmlResponse("<API3G><Result>000</Result></API3G>") }), /exceeds/);
   db.close();
 });

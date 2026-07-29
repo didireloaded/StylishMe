@@ -178,6 +178,7 @@ export const sellerOrders = sqliteTable("seller_orders", {
   commissionCents: integer("commission_cents").notNull(),
   sellerNetCents: integer("seller_net_cents").notNull(),
   status: text("status").notNull().default("awaiting_payment"),
+  payoutEligibleAt: text("payout_eligible_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
@@ -254,6 +255,20 @@ export const payoutBatches = sqliteTable("payout_batches", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   releasedAt: text("released_at"),
 }, (table) => [index("payout_batches_seller_status_idx").on(table.sellerId, table.status)]);
+
+export const sellerPayoutAccounts = sqliteTable("seller_payout_accounts", {
+  id: text("id").primaryKey(),
+  sellerId: text("seller_id").notNull().references(() => sellerState.inviteToken, { onDelete: "restrict" }),
+  provider: text("provider").notNull(),
+  providerAccountReference: text("provider_account_reference").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("seller_payout_accounts_seller_provider_idx").on(table.sellerId, table.provider),
+  uniqueIndex("seller_payout_accounts_provider_reference_idx").on(table.provider, table.providerAccountReference),
+  index("seller_payout_accounts_status_idx").on(table.provider, table.status),
+]);
 
 export const ledgerEntries = sqliteTable("ledger_entries", {
   id: text("id").primaryKey(),

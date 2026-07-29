@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     const body = await request.json() as Record<string, unknown>;
     const result = await createDpoRefund(env.DB, currentDpoConfig(), {
       orderId: typeof body.orderId === "string" ? body.orderId : "",
+      sellerOrderId: typeof body.sellerOrderId === "string" ? body.sellerOrderId : "",
       amountCents: Number(body.amountCents),
       reason: typeof body.reason === "string" ? body.reason : "",
       idempotencyKey: request.headers.get("idempotency-key")?.trim() ?? "",
