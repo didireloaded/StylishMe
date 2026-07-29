@@ -152,3 +152,10 @@ test("account reset migrations never erase shopping, seller, or try-on records",
   assert.match(sessionReset, /DELETE FROM `auth_sessions`/);
   assert.doesNotMatch(sessionReset, /customer_state|seller_state|try_on_usage/);
 });
+test("new signed-in accounts never inherit demo wishlist or address data", async () => {
+  const app = await read("app/StylishMeApp.tsx");
+  assert.match(app, /useState<string\[\]>\(user \? \[\] : \["p2"/);
+  assert.match(app, /useState<Address\[\]>\(user \? \[\] : defaultAddresses\)/);
+  assert.match(app, /checkoutNeedsAddress/);
+  assert.match(app, /Add a delivery address/);
+});
