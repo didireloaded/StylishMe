@@ -1,7 +1,9 @@
 import { and, eq, notLike } from "drizzle-orm";
+import { env } from "cloudflare:workers";
 
 import { getDb } from "../../../db";
 import { catalogProducts, inventoryVariants } from "../../../db/schema";
+import { releaseExpiredReservations } from "../../inventory-reservations";
 
 type PublicMetadata = {
   images?: string[];
@@ -20,6 +22,7 @@ const metadata = (value: string): PublicMetadata => {
 
 export async function GET(request: Request) {
   try {
+    await releaseExpiredReservations(env.DB).catch(() => undefined);
     const storeSlug = new URL(request.url).searchParams.get("store");
     const publishedSellerProduct = and(eq(catalogProducts.status, "published"), notLike(catalogProducts.sellerId, "launch:%"));
     const condition = storeSlug

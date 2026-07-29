@@ -136,7 +136,7 @@ async function projectOrders(db: D1DatabaseLike, rows: SellerOrderRow[]) {
 }
 
 export async function getSellerOrders(db: D1DatabaseLike, sellerId: string, sellerOrderId?: string) {
-  const where = sellerOrderId ? "so.seller_id = ? AND so.id = ?" : "so.seller_id = ?";
+  const where = sellerOrderId ? "so.seller_id = ? AND so.id = ? AND o.payment_status IN ('paid','partially_refunded')" : "so.seller_id = ? AND o.payment_status IN ('paid','partially_refunded')";
   const query = db.prepare(`SELECT so.id AS seller_order_id, so.order_id, so.seller_id, ss.store_name,
     so.status, so.subtotal_cents, so.payout_eligible_at, so.created_at, o.fulfilment_method, o.address_snapshot_json
     FROM seller_orders so JOIN commerce_orders o ON o.id = so.order_id
@@ -178,6 +178,7 @@ export async function updateSellerFulfilment(db: D1DatabaseLike, sellerId: strin
     }>();
   if (!row) throw new FulfilmentValidationError("Seller order was not found");
   if (row.payment_status !== "paid" && row.payment_status !== "partially_refunded") throw new FulfilmentValidationError("Only verified paid orders can be fulfilled");
+  if (row.status === "refunded") throw new FulfilmentValidationError("A refunded seller order cannot be fulfilled");
   const kind = fulfilmentKind(row.fulfilment_method);
   const transition = assertFulfilmentTransition(kind, row.status, input.status, input);
   const now = input.now ?? new Date();

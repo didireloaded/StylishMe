@@ -350,3 +350,44 @@ export const accountDeletionRequests = sqliteTable("account_deletion_requests", 
   uniqueIndex("account_deletion_requests_account_status_idx").on(table.accountEmail, table.status),
   index("account_deletion_requests_schedule_idx").on(table.status, table.scheduledFor),
 ]);
+
+export const authOauthStates = sqliteTable("auth_oauth_states", {
+  id: text("id").primaryKey(),
+  stateHash: text("state_hash").notNull().unique(),
+  bindingHash: text("binding_hash").notNull(),
+  nonceHash: text("nonce_hash").notNull(),
+  provider: text("provider").notNull(),
+  codeVerifier: text("code_verifier").notNull(),
+  role: text("role").notNull(),
+  intent: text("intent").notNull(),
+  linkEmail: text("link_email"),
+  returnTo: text("return_to").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("auth_oauth_states_expiry_idx").on(table.expiresAt, table.usedAt)]);
+
+export const authOauthPendingProfiles = sqliteTable("auth_oauth_pending_profiles", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  provider: text("provider").notNull(),
+  providerSubject: text("provider_subject").notNull(),
+  email: text("email").notNull(),
+  name: text("name").notNull().default(""),
+  role: text("role").notNull(),
+  returnTo: text("return_to").notNull(),
+  encryptedRefreshToken: text("encrypted_refresh_token"),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("auth_oauth_pending_profiles_provider_subject_idx").on(table.provider, table.providerSubject),
+  index("auth_oauth_pending_profiles_expiry_idx").on(table.expiresAt, table.usedAt),
+]);
+
+export const authProviderCredentials = sqliteTable("auth_provider_credentials", {
+  identityId: text("identity_id").primaryKey().references(() => authIdentities.id, { onDelete: "cascade" }),
+  encryptedRefreshToken: text("encrypted_refresh_token").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});

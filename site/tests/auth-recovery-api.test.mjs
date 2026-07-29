@@ -30,6 +30,7 @@ test("verification, password recovery, and deletion routes exist and stay uncach
   ].map(read).join("\n");
   assert.match(sources, /cache-control.*no-store/i);
   assert.match(sources, /safeRelativeReturnPath/);
+  assert.match(sources, /consumeAuthAttempt/);
   assert.match(sources, /STYLISHME_ADMIN_API_KEY/);
 });
 

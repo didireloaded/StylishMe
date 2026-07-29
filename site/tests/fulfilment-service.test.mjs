@@ -46,6 +46,14 @@ test("seller order queries are ownership scoped and include only operational dat
   db.close();
 });
 
+test("seller order queries never expose unpaid or abandoned checkout addresses", async () => {
+  const db = database();
+  db.database.prepare("UPDATE commerce_orders SET status = 'pending_payment', payment_status = 'unpaid'").run();
+  db.database.prepare("UPDATE seller_orders SET status = 'awaiting_payment'").run();
+  assert.deepEqual(await getSellerOrders(db, "seller-1"), []);
+  db.close();
+});
+
 test("seller delivery updates persist milestones and unlock payout only after delivery", async () => {
   const db = database();
   const at = new Date("2026-07-29T10:00:00.000Z");

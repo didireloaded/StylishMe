@@ -29,6 +29,9 @@ export async function ensureAuthTables() {
     env.DB.prepare("CREATE INDEX IF NOT EXISTS auth_action_tokens_expiry_idx ON auth_action_tokens(action, expires_at)"),
     env.DB.prepare("CREATE TABLE IF NOT EXISTS account_deletion_requests (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', requested_at TEXT NOT NULL, scheduled_for TEXT NOT NULL, completed_at TEXT, UNIQUE(account_email, status))"),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS account_deletion_requests_schedule_idx ON account_deletion_requests(status, scheduled_for)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_oauth_states (id TEXT PRIMARY KEY, state_hash TEXT NOT NULL UNIQUE, binding_hash TEXT NOT NULL, nonce_hash TEXT NOT NULL, provider TEXT NOT NULL, code_verifier TEXT NOT NULL, role TEXT NOT NULL, intent TEXT NOT NULL, link_email TEXT, return_to TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL)"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_oauth_pending_profiles (id TEXT PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, provider TEXT NOT NULL, provider_subject TEXT NOT NULL, email TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', role TEXT NOT NULL, return_to TEXT NOT NULL, encrypted_refresh_token TEXT, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL, UNIQUE(provider, provider_subject))"),
+    env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_provider_credentials (identity_id TEXT PRIMARY KEY, encrypted_refresh_token TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"),
   ]);
 }
 
@@ -39,6 +42,7 @@ export async function createPasswordHash(password: string, salt = randomToken(18
 }
 
 export async function passwordMatches(password: string, salt: string, expected: string) {
+  if (!salt || !expected) return false;
   const { hash } = await createPasswordHash(password, salt);
   if (hash.length !== expected.length) return false;
   let difference = 0;
@@ -66,7 +70,7 @@ export async function destroySession(token: string | undefined) {
 
 export const expiredSessionCookie = () => `${COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`;
 
-type AuthAttemptScope = "login" | "signup" | "recovery";
+type AuthAttemptScope = "login" | "signup" | "recovery" | "oauth";
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_COUNTER_RETENTION_MS = 24 * 60 * 60 * 1000;
 

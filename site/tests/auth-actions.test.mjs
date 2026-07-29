@@ -5,6 +5,8 @@ import {
   confirmEmailVerification,
   requestEmailVerification,
   requestPasswordReset,
+  requestAccountDeletionConfirmation,
+  confirmAccountDeletionConfirmation,
   resetPasswordWithToken,
 } from "../app/auth-actions.ts";
 import { passwordMatches } from "../app/stylishme-auth.ts";
@@ -19,8 +21,9 @@ function database() {
       avatar_key TEXT NOT NULL, email_verified_at TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
     );
     CREATE TABLE auth_sessions (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
+    CREATE TABLE account_deletion_requests (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, status TEXT NOT NULL, requested_at TEXT NOT NULL, scheduled_for TEXT NOT NULL, completed_at TEXT, UNIQUE(account_email, status));
     CREATE TABLE auth_action_tokens (
-      id TEXT PRIMARY KEY, account_email TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, action TEXT NOT NULL,
+      id TEXT PRIMARY KEY, account_email TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, action TEXT NOT NULL CHECK (action IN ('verify_email', 'reset_password', 'confirm_deletion')),
       expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL
     );
   `);
@@ -64,5 +67,19 @@ test("password reset changes the password and revokes all sessions", async () =>
   assert.equal(await passwordMatches("new-secure-2026", account.password_salt, account.password_hash), true);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM auth_sessions").get().count, 0);
   assert.equal(await resetPasswordWithToken(db, token, "another-secure-2026"), false);
+  db.close();
+});
+
+test("OAuth-only accounts can confirm deletion through their verified email", async () => {
+  const db = database();
+  db.database.prepare("UPDATE auth_accounts SET email_verified_at = created_at, password_hash = '', password_salt = ''").run();
+  let body;
+  const requested = await requestAccountDeletionConfirmation(db, "didi@example.com", emailConfig, async (_url, init) => { body = JSON.parse(init.body); return Response.json({ id: "email-delete" }); }, new Date("2026-07-29T10:00:00.000Z"));
+  assert.equal(requested.sent, true);
+  const token = new URL(body.text.match(/https:\/\/\S+/)[0]).searchParams.get("token");
+  const confirmed = await confirmAccountDeletionConfirmation(db, token, new Date("2026-07-29T10:05:00.000Z"));
+  assert.equal(confirmed?.scheduledFor, "2026-08-28T10:05:00.000Z");
+  assert.equal(db.database.prepare("SELECT status FROM account_deletion_requests").get().status, "pending");
+  assert.equal(await confirmAccountDeletionConfirmation(db, token, new Date("2026-07-29T10:06:00.000Z")), null);
   db.close();
 });

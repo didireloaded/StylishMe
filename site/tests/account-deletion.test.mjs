@@ -11,6 +11,7 @@ function database() {
     CREATE TABLE auth_sessions (token_hash TEXT PRIMARY KEY, email TEXT, expires_at TEXT, created_at TEXT);
     CREATE TABLE auth_action_tokens (id TEXT PRIMARY KEY, account_email TEXT, token_hash TEXT, action TEXT, expires_at TEXT, used_at TEXT, created_at TEXT);
     CREATE TABLE auth_identities (id TEXT PRIMARY KEY, account_email TEXT, provider TEXT, provider_subject TEXT, provider_email TEXT, created_at TEXT, last_used_at TEXT);
+    CREATE TABLE auth_provider_credentials (identity_id TEXT PRIMARY KEY, encrypted_refresh_token TEXT, created_at TEXT, updated_at TEXT);
     CREATE TABLE customer_state (email TEXT PRIMARY KEY, cart_json TEXT, wishlist_json TEXT, orders_json TEXT, profile_json TEXT, updated_at TEXT);
     CREATE TABLE seller_state (invite_token TEXT PRIMARY KEY, owner_email TEXT, approved INTEGER, store_name TEXT, state_json TEXT, updated_at TEXT);
     CREATE TABLE catalog_products (id TEXT PRIMARY KEY, seller_id TEXT, status TEXT, updated_at TEXT);
@@ -53,5 +54,24 @@ test("due deletion removes personal records and keeps anonymized commerce histor
   assert.deepEqual({ ...db.database.prepare("SELECT owner_email, approved, state_json FROM seller_state").get() }, { owner_email: null, approved: 0, state_json: "{}" });
   assert.equal(db.database.prepare("SELECT status FROM catalog_products").get().status, "archived");
   assert.deepEqual(deletedMedia.sort(), ["private-avatar.jpg", "private-story.jpg"]);
+  db.close();
+});
+test("account deletion waits when external provider revocation fails", async () => {
+  const db = database();
+  await scheduleAccountDeletion(db, "didi@example.com", new Date("2026-06-01T10:00:00.000Z"));
+  const result = await processDueAccountDeletions(db, { delete: async () => undefined }, new Date("2026-07-29T10:00:00.000Z"), async () => { throw new Error("provider unavailable"); });
+  assert.deepEqual(result, { processed: 0, failed: 1 });
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM auth_accounts").get().count, 1);
+  db.close();
+});
+
+test("account deletion keeps the account retryable when private media removal fails", async () => {
+  const db = database();
+  await scheduleAccountDeletion(db, "didi@example.com", new Date("2026-06-01T10:00:00.000Z"));
+  const result = await processDueAccountDeletions(db, { delete: async key => { if (key === "private-story.jpg") throw new Error("R2 unavailable"); } }, new Date("2026-07-29T10:00:00.000Z"));
+  assert.deepEqual(result, { processed: 0, failed: 1 });
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM auth_accounts").get().count, 1);
+  assert.equal(db.database.prepare("SELECT status FROM account_deletion_requests").get().status, "pending");
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM customer_outfit_stories").get().count, 1);
   db.close();
 });

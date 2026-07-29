@@ -2,7 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 
-export default function AuthForm({ returnTo, signedOut = false, reason = "" }: { returnTo: string; signedOut?: boolean; reason?: string }) {
+export default function AuthForm({ returnTo, signedOut = false, reason = "", oauthProviders }: { returnTo: string; signedOut?: boolean; reason?: string; oauthProviders: { google: boolean; apple: boolean } }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [role, setRole] = useState<"customer" | "seller">("customer");
   const [busy, setBusy] = useState(false);
@@ -45,12 +45,20 @@ export default function AuthForm({ returnTo, signedOut = false, reason = "" }: {
     finally { setBusy(false); }
   };
 
+  const providerSignIn = (provider: "google" | "apple") => {
+    const query = new URLSearchParams({ role, returnTo });
+    window.location.assign("/api/auth/oauth/" + provider + "/start?" + query.toString());
+  };
+
   return <div className="account-auth">
     {signedOut ? <div className="signed-out-note" role="status">You’ve been signed out.</div> : null}
     {reason === "check-email" ? <div className="signed-out-note" role="status">Check your email and verify your address before signing in.</div> : null}
     {reason === "verified" ? <div className="signed-out-note" role="status">Email verified. You can sign in now.</div> : null}
     {reason === "password-reset" ? <div className="signed-out-note" role="status">Password changed. Sign in with your new password.</div> : null}
     {reason === "verification-invalid" ? <p className="auth-error" role="alert">That verification link is invalid or has expired.</p> : null}
+    {reason === "oauth-cancelled" ? <p className="auth-error" role="alert">Sign-in was cancelled. You can try again.</p> : null}
+    {reason === "oauth-error" ? <p className="auth-error" role="alert">That sign-in could not be verified. Please try again.</p> : null}
+    {reason === "account-link-required" ? <p className="auth-error" role="alert">This email already has a StylishMe account. Sign in with email, then connect your provider in Security settings.</p> : null}
     <div className="auth-tabs" role="tablist"><button type="button" role="tab" aria-selected={mode === "login"} onClick={() => { setMode("login"); setError(""); }}>Sign in</button><button type="button" role="tab" aria-selected={mode === "signup"} onClick={() => { setMode("signup"); setError(""); }}>Create account</button></div>
     <form ref={formRef} onSubmit={submit}>
       {mode === "signup" ? <>
@@ -67,8 +75,10 @@ export default function AuthForm({ returnTo, signedOut = false, reason = "" }: {
       <button className="entry-primary" type="submit" disabled={busy}>{busy ? (mode === "login" ? "Signing in…" : "Creating your account…") : (mode === "login" ? "Sign in" : "Create my StylishMe")}</button>
     </form>
     {mode === "login" ? <button className="auth-link-button" type="button" disabled={busy} onClick={() => void resendVerification()}>Resend verification email</button> : null}
-    <div className="provider-divider"><i/><span>More sign-in options</span><i/></div>
-    <div className="provider-buttons"><button type="button" disabled title="Available after the Google connection is configured"><b>G</b>Continue with Google<small>Coming soon</small></button><button type="button" disabled title="Available after the Apple connection is configured"><b>●</b>Continue with Apple<small>Coming soon</small></button></div>
+    {oauthProviders.google || oauthProviders.apple ? <><div className="provider-divider"><i/><span>Or continue securely</span><i/></div><div className="provider-buttons">
+      {oauthProviders.google ? <button type="button" onClick={() => providerSignIn("google")}><b>G</b><span>Continue with Google</span></button> : null}
+      {oauthProviders.apple ? <button type="button" onClick={() => providerSignIn("apple")}><b>●</b><span>Continue with Apple</span></button> : null}
+    </div></> : null}
     <p className="auth-privacy">Your account belongs to StylishMe. Your profile photo is private and is not used in public outfit stories.</p>
   </div>;
 }

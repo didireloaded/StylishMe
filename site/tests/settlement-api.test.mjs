@@ -19,11 +19,11 @@ test("seller settlement endpoint is role-scoped and returns ledger aggregates on
   assert.match(app, /Available after returns/i);
 });
 
-test("payout batches require the private owner key and a verified transfer reference", async () => {
+test("payout batches require the private owner key and cannot be manually marked paid", async () => {
   const route = await read("app/api/payouts/route.ts");
   assert.match(route, /STYLISHME_ADMIN_API_KEY/);
   assert.match(route, /createHeldPayoutBatch/);
-  assert.match(route, /recordPayoutConfirmation/);
-  assert.match(route, /providerReference/);
+  assert.doesNotMatch(route, /recordPayoutConfirmation|providerReference/);
+  assert.match(route, /verified regulated payout provider/i);
   assert.doesNotMatch(route, /bankAccount|cardNumber|cvv/);
 });

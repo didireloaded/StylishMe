@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { createHeldPayoutBatch, recordPayoutConfirmation, SettlementValidationError } from "../../settlement-ledger";
+import { createHeldPayoutBatch, SettlementValidationError } from "../../settlement-ledger";
 
 const secureEquals = (left: string, right: string) => {
   if (!left || left.length !== right.length) return false;
@@ -22,14 +22,7 @@ export async function POST(request: Request) {
       });
       return Response.json(result, { status: result.reused ? 200 : 201, headers: { "cache-control": "no-store" } });
     }
-    if (body.action === "confirm") {
-      const result = await recordPayoutConfirmation(env.DB, {
-        batchId: typeof body.batchId === "string" ? body.batchId : "",
-        providerReference: typeof body.providerReference === "string" ? body.providerReference : "",
-      });
-      return Response.json(result, { headers: { "cache-control": "no-store" } });
-    }
-    return Response.json({ error: "Payout action is invalid" }, { status: 400, headers: { "cache-control": "no-store" } });
+    return Response.json({ error: "Payouts stay held until a verified regulated payout provider confirms the transfer" }, { status: 409, headers: { "cache-control": "no-store" } });
   } catch (error) {
     if (error instanceof SettlementValidationError) return Response.json({ error: error.message }, { status: 400, headers: { "cache-control": "no-store" } });
     return Response.json({ error: "Payout action could not be completed" }, { status: 503, headers: { "cache-control": "no-store" } });

@@ -137,7 +137,7 @@ test("auth throttling is atomic, scoped, and cleans up stale counters", async ()
   assert.match(auth, /attempt_count = CASE/);
   assert.match(auth, /RETURNING attempt_count/);
   assert.match(auth, /DELETE FROM auth_attempts WHERE window_start/);
-  assert.match(auth, /type AuthAttemptScope = "login" \| "signup" \| "recovery"/);
+  assert.match(auth, /type AuthAttemptScope = "login" \| "signup" \| "recovery" \| "oauth"/);
   assert.match(login, /consumeAuthAttempt\(request, email, 10, "login"\)/);
   assert.match(signup, /consumeAuthAttempt\(request, email, 5, "signup"\)/);
   assert.match(login + signup, /content-length/);

@@ -2,6 +2,10 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 
+import { processDueAccountDeletions } from "../app/account-deletion";
+import { releaseExpiredReservations } from "../app/inventory-reservations";
+import { revokeAccountProviderCredentials } from "../app/provider-credential-lifecycle";
+
 interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
@@ -51,6 +55,13 @@ function withSecurityHeaders(response: Response) {
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
 const worker = {
+  async scheduled(_controller: unknown, env: Env, ctx: ExecutionContext): Promise<void> {
+    const now = new Date();
+    ctx.waitUntil(Promise.all([
+      releaseExpiredReservations(env.DB, now),
+      processDueAccountDeletions(env.DB, env.MEDIA, now, email => revokeAccountProviderCredentials(env.DB, email)),
+    ]).then(() => undefined));
+  },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 

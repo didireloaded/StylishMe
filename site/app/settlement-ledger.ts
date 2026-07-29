@@ -88,16 +88,3 @@ export async function createHeldPayoutBatch(db: D1DatabaseLike, input: { sellerI
   if (!batch) throw new SettlementValidationError("No eligible seller balance is ready for payout");
   return { id: batch.id, amountCents: batch.amount_cents, status: batch.status, reused: false };
 }
-
-export async function recordPayoutConfirmation(db: D1DatabaseLike, input: { batchId: string; providerReference: string; now?: Date }) {
-  const reference = input.providerReference.trim().slice(0, 160);
-  if (!reference) throw new SettlementValidationError("A verified transfer reference is required");
-  const timestamp = (input.now ?? new Date()).toISOString();
-  await db.prepare(`UPDATE payout_batches SET status = 'paid', provider_reference = ?, released_at = ?
-    WHERE id = ? AND status IN ('held','ready_for_transfer','processing')`)
-    .bind(reference, timestamp, input.batchId).run();
-  const batch = await db.prepare("SELECT id, amount_cents, status, provider_reference FROM payout_batches WHERE id = ? LIMIT 1")
-    .bind(input.batchId).first<{ id: string; amount_cents: number; status: string; provider_reference: string | null }>();
-  if (!batch || batch.status !== "paid") throw new SettlementValidationError("Payout batch could not be confirmed");
-  return { id: batch.id, amountCents: batch.amount_cents, status: batch.status, providerReference: batch.provider_reference };
-}

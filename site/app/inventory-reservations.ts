@@ -75,22 +75,50 @@ export async function releaseExpiredReservations(db: D1DatabaseLike, now = new D
 
 export async function confirmReservation(db: D1DatabaseLike, orderId: string, now = new Date()) {
   const timestamp = now.toISOString();
+  const coverageGuard = `EXISTS (SELECT 1 FROM commerce_order_items required WHERE required.order_id = ?)
+    AND NOT EXISTS (
+      SELECT 1 FROM (
+        SELECT variant_id, SUM(quantity) AS required_quantity FROM commerce_order_items
+        WHERE order_id = ? GROUP BY variant_id
+      ) required
+      LEFT JOIN (
+        SELECT variant_id, SUM(quantity) AS held_quantity FROM inventory_reservations
+        WHERE order_id = ? AND status = 'active' AND expires_at > ? GROUP BY variant_id
+      ) held ON held.variant_id = required.variant_id
+      WHERE required.required_quantity != COALESCE(held.held_quantity, 0)
+    )`;
   await db.batch([
     db.prepare(`UPDATE inventory_variants
       SET available_quantity = available_quantity - COALESCE((
         SELECT SUM(quantity) FROM inventory_reservations
-        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active'
+        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active' AND expires_at > ?
       ), 0), reserved_quantity = reserved_quantity - COALESCE((
         SELECT SUM(quantity) FROM inventory_reservations
-        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active'
+        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active' AND expires_at > ?
       ), 0), version = version + 1, updated_at = ?
       WHERE EXISTS (
         SELECT 1 FROM inventory_reservations
-        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active'
-      )`).bind(orderId, orderId, timestamp, orderId),
+        WHERE variant_id = inventory_variants.id AND order_id = ? AND status = 'active' AND expires_at > ?
+      ) AND ${coverageGuard}`)
+      .bind(orderId, timestamp, orderId, timestamp, timestamp, orderId, timestamp, orderId, orderId, orderId, timestamp),
     db.prepare(`UPDATE inventory_reservations SET status = 'confirmed', updated_at = ?
-      WHERE order_id = ? AND status = 'active'`).bind(timestamp, orderId),
+      WHERE order_id = ? AND status = 'active' AND expires_at > ? AND ${coverageGuard}`)
+      .bind(timestamp, orderId, timestamp, orderId, orderId, orderId, timestamp),
   ]);
+  const confirmed = await db.prepare(`SELECT CASE WHEN EXISTS (
+      SELECT 1 FROM commerce_order_items required WHERE required.order_id = ?
+    ) AND NOT EXISTS (
+      SELECT 1 FROM (
+        SELECT variant_id, SUM(quantity) AS required_quantity FROM commerce_order_items
+        WHERE order_id = ? GROUP BY variant_id
+      ) required
+      LEFT JOIN (
+        SELECT variant_id, SUM(quantity) AS held_quantity FROM inventory_reservations
+        WHERE order_id = ? AND status = 'confirmed' GROUP BY variant_id
+      ) held ON held.variant_id = required.variant_id
+      WHERE required.required_quantity != COALESCE(held.held_quantity, 0)
+    ) THEN 1 ELSE 0 END AS complete`).bind(orderId, orderId, orderId).first<{ complete: number }>();
+  return confirmed?.complete === 1;
 }
 
 export async function releaseOrderReservations(db: D1DatabaseLike, orderId: string, now = new Date()) {

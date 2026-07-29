@@ -2,7 +2,7 @@ import type { D1DatabaseLike } from "./inventory-reservations";
 import { createPasswordHash } from "./stylishme-auth";
 import { sendTransactionalEmail, type EmailConfig } from "./transactional-email";
 
-type AuthAction = "verify_email" | "reset_password";
+type AuthAction = "verify_email" | "reset_password" | "confirm_deletion";
 const encoder = new TextEncoder();
 const base64 = (bytes: Uint8Array) => {
   let value = "";
@@ -87,14 +87,62 @@ export async function requestPasswordReset(db: D1DatabaseLike, email: string, co
 export async function resetPasswordWithToken(db: D1DatabaseLike, rawToken: unknown, password: unknown, now = new Date()) {
   const value = typeof password === "string" ? password : "";
   if (new TextEncoder().encode(value).byteLength > 256 || value.length < 10 || !/[A-Za-z]/.test(value) || !/\d/.test(value)) return false;
-  const passwordRecord = await createPasswordHash(value);
+  const token = typeof rawToken === "string" ? rawToken.trim() : "";
+  if (!/^[a-zA-Z0-9_-]{30,100}$/.test(token)) return false;
+  const hash = await tokenHash(token);
   const timestamp = now.toISOString();
-  return consumeToken(db, rawToken, "reset_password", now, (email, marker) => [
+  const valid = await db.prepare(`SELECT account_email FROM auth_action_tokens
+    WHERE token_hash = ? AND action = 'reset_password' AND used_at IS NULL AND expires_at > ? LIMIT 1`)
+    .bind(hash, timestamp).first<{ account_email: string }>();
+  if (!valid) return false;
+  const passwordRecord = await createPasswordHash(value);
+  const marker = `${timestamp}:${crypto.randomUUID()}`;
+  await db.batch([
+    db.prepare(`UPDATE auth_action_tokens SET used_at = ?
+      WHERE token_hash = ? AND action = 'reset_password' AND used_at IS NULL AND expires_at > ?`).bind(marker, hash, timestamp),
     db.prepare(`UPDATE auth_accounts SET password_hash = ?, password_salt = ?, updated_at = ? WHERE email = ?
       AND EXISTS (SELECT 1 FROM auth_action_tokens WHERE account_email = ? AND action = 'reset_password' AND used_at = ?)`)
-      .bind(passwordRecord.hash, passwordRecord.salt, timestamp, email, email, marker),
+      .bind(passwordRecord.hash, passwordRecord.salt, timestamp, valid.account_email, valid.account_email, marker),
     db.prepare(`DELETE FROM auth_sessions WHERE email = ? AND EXISTS
       (SELECT 1 FROM auth_action_tokens WHERE account_email = ? AND action = 'reset_password' AND used_at = ?)`)
-      .bind(email, email, marker),
+      .bind(valid.account_email, valid.account_email, marker),
   ]);
+  const consumed = await db.prepare("SELECT used_at FROM auth_action_tokens WHERE token_hash = ? LIMIT 1")
+    .bind(hash).first<{ used_at: string | null }>();
+  return consumed?.used_at === marker;
+}
+
+export async function requestAccountDeletionConfirmation(db: D1DatabaseLike, email: string, config: EmailConfig, fetcher: typeof fetch = fetch, now = new Date()) {
+  const normalized = email.trim().toLowerCase();
+  const account = await db.prepare("SELECT email FROM auth_accounts WHERE email = ? AND email_verified_at IS NOT NULL AND deleted_at IS NULL LIMIT 1")
+    .bind(normalized).first<{ email: string }>();
+  if (!account) return { sent: false };
+  const token = await issueToken(db, account.email, "confirm_deletion", now, 30);
+  const link = `${config.publicOrigin}/api/account/deletion/confirm?token=${encodeURIComponent(token)}`;
+  try {
+    await sendTransactionalEmail(config, {
+      to: account.email,
+      subject: "Confirm your StylishMe account deletion",
+      text: `Confirm account deletion: ${link}\nThis link expires in 30 minutes. Your 30-day grace period starts only after you confirm.`,
+    }, fetcher);
+    return { sent: true };
+  } catch (error) {
+    await db.prepare("DELETE FROM auth_action_tokens WHERE token_hash = ?").bind(await tokenHash(token)).run().catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function confirmAccountDeletionConfirmation(db: D1DatabaseLike, rawToken: unknown, now = new Date()) {
+  const requestedAt = now.toISOString();
+  const scheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const id = crypto.randomUUID();
+  const consumed = await consumeToken(db, rawToken, "confirm_deletion", now, (email, marker) => [
+    db.prepare(`INSERT INTO account_deletion_requests (id, account_email, status, requested_at, scheduled_for, completed_at)
+      SELECT ?, ?, 'pending', ?, ?, NULL WHERE EXISTS (
+        SELECT 1 FROM auth_action_tokens WHERE account_email = ? AND action = 'confirm_deletion' AND used_at = ?
+      ) ON CONFLICT(account_email, status) DO UPDATE SET requested_at = excluded.requested_at,
+        scheduled_for = excluded.scheduled_for, completed_at = NULL`)
+      .bind(id, email, requestedAt, scheduledFor, email, marker),
+  ]);
+  return consumed ? { scheduledFor } : null;
 }
