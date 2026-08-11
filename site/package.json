@@ -7,6 +7,7 @@
   },
   "scripts": {
     "test:style-me": "node --import tsx --test tests/style-me-domain.test.mjs",
+    "test:account-lifecycle": "node --import tsx --import ./tests/dom-setup.mjs --test --test-concurrency=1 tests/account-lifecycle-schema.test.mjs tests/store-closure.test.mjs tests/store-closure-ui.test.mjs tests/account-deletion.test.mjs tests/auth-actions.test.mjs tests/auth-recovery-api.test.mjs",
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "vinext start",

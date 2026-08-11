@@ -27,6 +27,8 @@ test("verification, password recovery, and deletion routes exist and stay uncach
     "../app/api/auth/password/reset/route.ts",
     "../app/api/account/deletion/route.ts",
     "../app/api/account-deletion/process/route.ts",
+    "../app/api/seller/store-closure/route.ts",
+    "../app/api/seller/store-closure/confirm/route.ts",
   ].map(read).join("\n");
   assert.match(sources, /cache-control.*no-store/i);
   assert.match(sources, /safeRelativeReturnPath/);
