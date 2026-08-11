@@ -10,7 +10,7 @@ import {
   resetPasswordWithToken,
 } from "../app/auth-actions.ts";
 import { passwordMatches } from "../app/stylishme-auth.ts";
-import { currentEmailConfig } from "../app/transactional-email.ts";
+import { currentEmailConfig, sendTransactionalEmail } from "../app/transactional-email.ts";
 import { SqliteD1 } from "./sqlite-d1.mjs";
 
 function database() {
@@ -37,6 +37,18 @@ const emailConfig = { available: true, apiKey: "re_live", from: "StylishMe <hell
 test("transactional email is unavailable until every production value exists", () => {
   assert.equal(currentEmailConfig({ RESEND_API_KEY: "key" }).available, false);
   assert.equal(currentEmailConfig({ RESEND_API_KEY: "key", AUTH_EMAIL_FROM: "hello@stylishme.na", PUBLIC_APP_ORIGIN: "https://stylishme.na" }).available, true);
+});
+
+test("transactional email safely classifies Resend recipient restrictions", async () => {
+  const fetcher = async () => Response.json({
+    statusCode: 403,
+    name: "validation_error",
+    message: "You can only send testing emails to your own email address.",
+  }, { status: 403 });
+  await assert.rejects(
+    sendTransactionalEmail(emailConfig, { to: "customer@example.com", subject: "Test", text: "Test" }, fetcher),
+    error => error?.name === "EmailDeliveryError" && error?.reason === "recipient_restricted" && error?.status === 403,
+  );
 });
 
 test("email verification stores only a hash and the link is single-use", async () => {

@@ -7,6 +7,15 @@ export class EmailUnavailableError extends Error {
   }
 }
 
+export type EmailDeliveryReason = "recipient_restricted" | "invalid_api_key" | "provider_rejected";
+
+export class EmailDeliveryError extends Error {
+  constructor(public reason: EmailDeliveryReason, public status: number) {
+    super("Account email could not be sent");
+    this.name = "EmailDeliveryError";
+  }
+}
+
 export function currentEmailConfig(source: Record<string, string | undefined> = process.env): EmailConfig {
   const apiKey = source.RESEND_API_KEY?.trim() ?? "";
   const from = source.AUTH_EMAIL_FROM?.trim() ?? "";
@@ -30,6 +39,15 @@ export async function sendTransactionalEmail(
     headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from: config.from, to: [message.to], subject: message.subject, text: message.text }),
   });
-  if (!response.ok) throw new EmailUnavailableError("Account email could not be sent");
+  if (!response.ok) {
+    const providerError = await response.json().catch(() => ({})) as { message?: unknown; name?: unknown };
+    const message = typeof providerError.message === "string" ? providerError.message.toLowerCase() : "";
+    const reason: EmailDeliveryReason = message.includes("only send testing emails to your own email address")
+      ? "recipient_restricted"
+      : response.status === 401 || message.includes("api key is invalid")
+        ? "invalid_api_key"
+        : "provider_rejected";
+    throw new EmailDeliveryError(reason, response.status);
+  }
   return response.json().catch(() => ({}));
 }

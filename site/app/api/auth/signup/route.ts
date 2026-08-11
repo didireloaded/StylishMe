@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { consumeAuthAttempt, createPasswordHash, ensureAuthTables, safeRelativeReturnPath } from "../../../stylishme-auth";
 import { inspectProfileImage } from "../../../customer-story-image";
 import { requestEmailVerification } from "../../../auth-actions";
-import { currentEmailConfig } from "../../../transactional-email";
+import { currentEmailConfig, EmailDeliveryError } from "../../../transactional-email";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,9 +42,19 @@ export async function POST(request: Request) {
     createdAccount = email;
     await requestEmailVerification(env.DB, email, emailConfig);
     return Response.json({ success: true, verificationRequired: true, returnTo: `/login?reason=check-email&returnTo=${encodeURIComponent(returnTo)}` }, { status: 201, headers: { "cache-control": "no-store" } });
-  } catch {
+  } catch (error) {
     if (createdAccount) await env.DB.batch([env.DB.prepare("DELETE FROM customer_state WHERE email = ?").bind(createdAccount), env.DB.prepare("DELETE FROM auth_accounts WHERE email = ?").bind(createdAccount)]).catch(() => undefined);
     if (avatarKey) await env.MEDIA.delete(avatarKey).catch(() => undefined);
+    if (error instanceof EmailDeliveryError) {
+      console.error("Signup email delivery failed", { reason: error.reason, status: error.status });
+      const message = error.reason === "recipient_restricted"
+        ? "Until StylishMe has a verified email domain, use the email connected to the Resend account"
+        : error.reason === "invalid_api_key"
+          ? "Account email service is not configured correctly"
+          : "Account email could not be sent. Please try again shortly";
+      return Response.json({ error: message }, { status: 503, headers: { "cache-control": "no-store" } });
+    }
+    console.error("Signup failed", { reason: error instanceof Error ? error.name : "unknown" });
     return Response.json({ error: "Unable to create your account right now" }, { status: 500 });
   }
 }
