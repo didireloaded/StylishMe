@@ -278,7 +278,37 @@ Existing JSON seller state may be read temporarily only through an explicit migr
 
 Product, price, policy, variant, seller and fulfilment snapshots remain attached to historical order items so later catalogue edits do not rewrite prior purchases.
 
-## 20. Testing and verification
+## 20. Store closure and customer-account deletion
+
+Closing a seller store and deleting a StylishMe identity are separate actions.
+
+### Close my store
+
+An authenticated seller may choose Close my store from seller account settings. This removes the seller role and seller workspace while preserving the shared login and customer account.
+
+Before closure, the server checks for active or unfulfilled seller orders, open returns, reserved inventory, pending refunds, unresolved fulfilment obligations and financial records that require resolution. A blocking obligation returns a precise reason and an exact route to the affected record. The client cannot bypass this check.
+
+When closure is allowed, the seller must recently reauthenticate, review the deletion summary and enter the store name as confirmation. The server then atomically prevents new purchases, archives public products and collections, removes seller access, revokes seller-scoped sessions, queues eligible private drafts and unpublished images for deletion and records an audit event. Legally or operationally required order, return, settlement and security records remain under restricted retention.
+
+The closed store and product deep links show a neutral unavailable state and never redirect to another seller. The user is redirected with route replacement to the customer experience and sees: "Your store has been closed. You can continue using StylishMe as a customer."
+
+Store closure enters a seven-day recovery period. The store remains unavailable and the former seller cannot access ordinary seller operations. A restoration request during this period requires reauthentication and may be refused for a security, compliance or conflicting marketplace reason. After the period expires, a cleanup job permanently removes eligible seller-private data.
+
+### Delete my StylishMe account
+
+An authenticated customer may choose Delete my StylishMe account from customer account settings. Deletion is blocked while the identity owns an active seller store, has active orders, uncollected purchases, open returns or disputes, pending refunds or another unresolved obligation. A seller must close the store first.
+
+Deletion requires recent reauthentication, a clear retention summary and explicit typed confirmation. It queues deletion of eligible profile information, profile image, saved addresses, wishlist, wardrobe, saved outfits, notification preferences, optional community posts and reactions, private drafts, device tokens and other customer-private state. Try On images are already transient and must not exist in persistent storage.
+
+Completed-order, refund, fraud-prevention, consent, audit and security records required for legitimate retention are minimized and detached from the live profile through an anonymized customer reference where possible. The deletion operation never removes records needed to preserve another party's order, return or financial history.
+
+Account deletion revokes every session, clears private client and PWA caches and redirects with route replacement to `/login?reason=account-deleted`. Browser Back cannot reveal a private route. A confirmation email is sent only when a transactional email service is genuinely configured.
+
+Account deletion also uses a seven-day recovery period. The identity is inaccessible during that period. A sign-in attempt opens only the deletion-cancellation journey. Cancellation requires reauthentication. After expiry, eligible customer-private data is permanently removed and the login cannot be restored.
+
+Both deletion workflows are idempotent, server-authoritative, rate-limited and audited. Repeated submissions cannot produce partial role, store or identity state.
+
+## 21. Testing and verification
 
 Automated and production-safe verification covers:
 
@@ -300,12 +330,18 @@ Automated and production-safe verification covers:
 - stable store and product deep links;
 - notification deduplication and exact deep links;
 - logout, session expiry and private-cache clearing;
+- store-closure blockers, reauthentication, role removal and customer redirect;
+- closed store and product deep-link behaviour;
+- store-closure recovery and final cleanup;
+- customer-deletion blockers, anonymization, global session revocation and private-cache clearing;
+- account-deletion recovery, cancellation and final cleanup;
+- repeated and concurrent deletion-request idempotency;
 - weak-network and narrow-mobile behaviour; and
 - keyboard, focus, screen-reader status and reduced-motion behaviour.
 
 Production verification uses controlled seller and customer accounts and non-private fixtures. It does not inspect genuine customer payment or private image data.
 
-## 21. Delivery sequence
+## 22. Delivery sequence
 
 Implementation proceeds in six independently verifiable stages:
 
@@ -318,7 +354,7 @@ Implementation proceeds in six independently verifiable stages:
 
 Each stage must preserve the current customer experience and shared marketplace integrity. A later stage does not justify fake behaviour in an earlier release.
 
-## 22. Included scope
+## 23. Included scope
 
 - Mobile-first seller workspace with real routes.
 - Operational seller home.
@@ -336,9 +372,11 @@ Each stage must preserve the current customer experience and shared marketplace 
 - Collections, store profile and stable deep links.
 - Operational notifications and activity.
 - Server-side tenant isolation, auditability and privacy.
+- Safe seller-store closure with customer-account preservation.
+- Safe full-account deletion, recovery periods and retained-record minimization.
 - Accessibility, weak-network behaviour, tests and production verification.
 
-## 23. Excluded scope
+## 24. Excluded scope
 
 - Real payment activation, refunds and settlement.
 - Seller bank verification and payouts.
@@ -353,8 +391,10 @@ Each stage must preserve the current customer experience and shared marketplace 
 - Public social feed changes.
 - Customer-app visual redesign.
 
-## 24. Acceptance criteria
+## 25. Acceptance criteria
 
 Seller Operations 1.0 is accepted when an authenticated eligible seller can resume store setup, create and recover a product draft, securely upload images, build valid variants, automatically publish only after deterministic checks, see the same published record in the customer catalogue, adjust inventory with a reason and immutable history, receive and partially confirm only its own order items, complete truthful pickup or delivery preparation, share stable store and product links, and receive exact operational notifications.
 
 It is also accepted only when concurrent and duplicate mutations cannot corrupt stock or order state; another seller's resources remain inaccessible; private customer and Try On data never enter the seller workspace; inactive payment and courier capabilities remain clearly unavailable; private seller data does not remain visible after logout; and the established StylishMe customer experience does not regress.
+
+Store closure is accepted only when unresolved obligations block it precisely; successful closure removes seller access without deleting the customer account; public seller links become unavailable; retained records remain protected; and recovery and final cleanup obey the seven-day lifecycle. Full-account deletion is accepted only when active seller or commerce obligations block it; successful submission revokes all sessions and private caches; retained records are minimized and anonymized where possible; recovery cancellation is isolated from the normal app; and final cleanup cannot be applied twice.
