@@ -22,6 +22,7 @@ function database() {
     CREATE TABLE customer_outfit_story_reports (story_id TEXT);
     CREATE TABLE try_on_usage (key TEXT PRIMARY KEY, email TEXT);
     CREATE TABLE account_deletion_requests (id TEXT PRIMARY KEY, account_email TEXT, status TEXT, requested_at TEXT, scheduled_for TEXT, completed_at TEXT, UNIQUE(account_email, status));
+    CREATE TABLE seller_store_closure_requests (id TEXT PRIMARY KEY, account_email TEXT);
   `);
   db.database.prepare("INSERT INTO auth_accounts VALUES ('didi@example.com','Didi','hash','salt','private-avatar.jpg','2026-07-01',NULL,'2026-07-01','2026-07-01')").run();
   db.database.prepare("INSERT INTO customer_state VALUES ('didi@example.com','[]','[]','[]','{}','2026-07-01')").run();

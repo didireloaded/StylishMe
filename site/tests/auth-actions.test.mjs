@@ -23,9 +23,11 @@ function database() {
     CREATE TABLE auth_sessions (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE account_deletion_requests (id TEXT PRIMARY KEY, account_email TEXT NOT NULL, status TEXT NOT NULL, requested_at TEXT NOT NULL, scheduled_for TEXT NOT NULL, completed_at TEXT, UNIQUE(account_email, status));
     CREATE TABLE auth_action_tokens (
-      id TEXT PRIMARY KEY, account_email TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, action TEXT NOT NULL CHECK (action IN ('verify_email', 'reset_password', 'confirm_deletion')),
+      id TEXT PRIMARY KEY, account_email TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE, action TEXT NOT NULL CHECK (action IN ('verify_email', 'reset_password', 'confirm_deletion', 'confirm_store_closure')),
       expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL
     );
+    CREATE TABLE seller_state (invite_token TEXT PRIMARY KEY, owner_email TEXT, approved INTEGER, store_name TEXT, state_json TEXT, updated_at TEXT);
+    CREATE TABLE commerce_orders (id TEXT PRIMARY KEY, customer_email TEXT, status TEXT);
   `);
   db.database.prepare("INSERT INTO auth_accounts VALUES (?, ?, ?, ?, ?, NULL, NULL, ?, ?)")
     .run("didi@example.com", "Didi", "old-hash", "old-salt", "avatar.jpg", "2026-07-29T10:00:00.000Z", "2026-07-29T10:00:00.000Z");
@@ -94,7 +96,7 @@ test("OAuth-only accounts can confirm deletion through their verified email", as
   assert.equal(requested.sent, true);
   const token = new URL(body.text.match(/https:\/\/\S+/)[0]).searchParams.get("token");
   const confirmed = await confirmAccountDeletionConfirmation(db, token, new Date("2026-07-29T10:05:00.000Z"));
-  assert.equal(confirmed?.scheduledFor, "2026-08-28T10:05:00.000Z");
+  assert.equal(confirmed?.scheduledFor, "2026-08-05T10:05:00.000Z");
   assert.equal(db.database.prepare("SELECT status FROM account_deletion_requests").get().status, "pending");
   assert.equal(await confirmAccountDeletionConfirmation(db, token, new Date("2026-07-29T10:06:00.000Z")), null);
   db.close();

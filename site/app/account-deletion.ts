@@ -22,10 +22,13 @@ export async function scheduleAccountDeletion(db: D1DatabaseLike, email: string,
   const scheduledFor = recoveryDeadline(now);
   const requestedAt = now.toISOString();
   const id = crypto.randomUUID();
-  await db.prepare(`INSERT INTO account_deletion_requests (id, account_email, status, requested_at, scheduled_for, completed_at)
-    VALUES (?, ?, 'pending', ?, ?, NULL)
-    ON CONFLICT(account_email, status) DO UPDATE SET requested_at = excluded.requested_at, scheduled_for = excluded.scheduled_for, completed_at = NULL`)
-    .bind(id, normalized, requestedAt, scheduledFor).run();
+  await db.batch([
+    db.prepare(`INSERT INTO account_deletion_requests (id, account_email, status, requested_at, scheduled_for, completed_at)
+      VALUES (?, ?, 'pending', ?, ?, NULL)
+      ON CONFLICT(account_email, status) DO UPDATE SET requested_at = excluded.requested_at, scheduled_for = excluded.scheduled_for, completed_at = NULL`)
+      .bind(id, normalized, requestedAt, scheduledFor),
+    db.prepare("DELETE FROM auth_sessions WHERE email = ?").bind(normalized),
+  ]);
   return { scheduledFor };
 }
 
@@ -68,6 +71,7 @@ export async function processDueAccountDeletions(db: D1DatabaseLike, media: Medi
         db.prepare("DELETE FROM auth_provider_credentials WHERE identity_id IN (SELECT id FROM auth_identities WHERE account_email = ?)").bind(account.account_email),
         db.prepare("DELETE FROM auth_identities WHERE account_email = ?").bind(account.account_email),
         db.prepare("DELETE FROM auth_action_tokens WHERE account_email = ?").bind(account.account_email),
+        db.prepare("DELETE FROM seller_store_closure_requests WHERE account_email = ?").bind(account.account_email),
         db.prepare("DELETE FROM account_deletion_requests WHERE account_email = ?").bind(account.account_email),
         db.prepare("DELETE FROM auth_accounts WHERE email = ?").bind(account.account_email),
       ]);

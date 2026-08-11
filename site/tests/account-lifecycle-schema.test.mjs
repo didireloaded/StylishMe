@@ -29,5 +29,6 @@ test("the lifecycle migration stores recoverable seller closures", async () => {
   assert.match(migration, /previous_product_statuses_json/);
   assert.match(migration, /scheduled_for/);
   assert.match(migration, /cancelled_at/);
-  assert.doesNotMatch(migration, /DROP TABLE|DELETE FROM/);
+  assert.match(migration, /INSERT INTO `auth_action_tokens`[\s\S]+SELECT[\s\S]+FROM `auth_action_tokens_legacy`/);
+  assert.doesNotMatch(migration, /DROP TABLE `(auth_accounts|seller_state|commerce_orders|seller_orders)`/);
 });

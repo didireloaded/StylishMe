@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 
-import { cancelAccountDeletion, pendingAccountDeletion, scheduleAccountDeletion } from "../../../account-deletion";
+import { cancelAccountDeletion, checkAccountDeletionEligibility, pendingAccountDeletion, scheduleAccountDeletion } from "../../../account-deletion";
+import { publicBlockerMessage } from "../../../account-lifecycle";
 import { requestAccountDeletionConfirmation } from "../../../auth-actions";
 import { consumeAuthAttempt, getStylishMeUser, passwordMatches, safeRelativeReturnPath } from "../../../stylishme-auth";
 import { currentEmailConfig, sendTransactionalEmail } from "../../../transactional-email";
@@ -10,17 +11,20 @@ const noStore = { "cache-control": "no-store" };
 export async function GET() {
   const user = await getStylishMeUser();
   if (!user) return Response.json({ error: "Sign in to manage your account" }, { status: 401, headers: noStore });
-  const [pending, account] = await Promise.all([
+  const [pending, account, eligibility] = await Promise.all([
     pendingAccountDeletion(env.DB, user.email),
     env.DB.prepare("SELECT password_hash FROM auth_accounts WHERE email = ? LIMIT 1").bind(user.email).first() as Promise<{ password_hash: string } | null>,
+    checkAccountDeletionEligibility(env.DB, user.email),
   ]);
-  return Response.json({ pending: Boolean(pending), scheduledFor: pending?.scheduled_for ?? null, passwordEnabled: Boolean(account?.password_hash) }, { headers: noStore });
+  return Response.json({ pending: Boolean(pending), scheduledFor: pending?.scheduled_for ?? null, passwordEnabled: Boolean(account?.password_hash), eligibility: eligibility.allowed ? eligibility : { ...eligibility, blockers: eligibility.blockers.map(publicBlockerMessage) } }, { headers: noStore });
 }
 
 export async function POST(request: Request) {
   try {
     const user = await getStylishMeUser();
     if (!user) return Response.json({ error: "Sign in to manage your account" }, { status: 401, headers: noStore });
+    const eligibility = await checkAccountDeletionEligibility(env.DB, user.email);
+    if (!eligibility.allowed) return Response.json({ error: "Resolve account obligations before deleting your account", blockers: eligibility.blockers.map(publicBlockerMessage) }, { status: 409, headers: noStore });
     const body = await request.json() as Record<string, unknown>;
     const password = typeof body.password === "string" ? body.password : "";
     safeRelativeReturnPath(typeof body.returnTo === "string" ? body.returnTo : "/");
