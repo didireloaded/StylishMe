@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import { profilePhotoError, readAuthResponse } from "./auth-upload";
 
 export default function AuthForm({ returnTo, signedOut = false, reason = "", oauthProviders }: { returnTo: string; signedOut?: boolean; reason?: string; oauthProviders: { google: boolean; apple: boolean } }) {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -18,11 +19,17 @@ export default function AuthForm({ returnTo, signedOut = false, reason = "", oau
     setBusy(true); setError(""); setNotice("");
     const form = event.currentTarget;
     try {
+      const formData = new FormData(form);
+      if (mode === "signup") {
+        const avatar = formData.get("avatar");
+        const photoError = profilePhotoError(avatar instanceof File ? avatar : null);
+        if (photoError) throw new Error(photoError);
+      }
       const response = mode === "signup"
-        ? await fetch("/api/auth/signup", { method: "POST", body: new FormData(form) })
-        : await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: new FormData(form).get("email"), password: new FormData(form).get("password"), returnTo }) });
-      const body = await response.json() as { error?: string; returnTo?: string; verificationRequired?: boolean };
-      if (!response.ok) throw new Error(body.error ?? "Unable to continue");
+        ? await fetch("/api/auth/signup", { method: "POST", body: formData })
+        : await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: formData.get("email"), password: formData.get("password"), returnTo }) });
+      const body = await readAuthResponse<{ error?: string; returnTo?: string; verificationRequired?: boolean }>(response, "Unable to continue");
+      if (!response.ok || body.error) throw new Error(body.error ?? "Unable to continue");
       if (body.verificationRequired) {
         window.location.replace(body.returnTo ?? `/login?reason=check-email&returnTo=${encodeURIComponent(returnTo)}`);
         return;
@@ -38,8 +45,8 @@ export default function AuthForm({ returnTo, signedOut = false, reason = "", oau
     setBusy(true); setError(""); setNotice("");
     try {
       const response = await fetch("/api/auth/verification/request", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, returnTo }) });
-      const body = await response.json() as { error?: string; message?: string };
-      if (!response.ok) throw new Error(body.error ?? "Unable to resend verification");
+      const body = await readAuthResponse<{ error?: string; message?: string }>(response, "Unable to resend verification");
+      if (!response.ok || body.error) throw new Error(body.error ?? "Unable to resend verification");
       setNotice(body.message ?? "Check your email for a new verification link.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to resend verification"); }
     finally { setBusy(false); }
@@ -65,7 +72,7 @@ export default function AuthForm({ returnTo, signedOut = false, reason = "", oau
         <div className="role-choice"><button type="button" className={role === "customer" ? "selected" : ""} onClick={() => setRole("customer")}>I’m shopping</button><button type="button" className={role === "seller" ? "selected" : ""} onClick={() => setRole("seller")}>I’m selling</button></div>
         <input type="hidden" name="role" value={role}/><input type="hidden" name="returnTo" value={returnTo}/>
         <label>Full name<input name="name" autoComplete="name" required minLength={2}/></label>
-        <label className="photo-field">Profile photo<input ref={fileRef} name="avatar" type="file" accept="image/jpeg,image/png,image/webp" required onChange={event => setPhotoName(event.target.files?.[0]?.name ?? "")}/><button type="button" onClick={() => fileRef.current?.click()}>{photoName || "Choose your photo"}</button><small>Required · JPG, PNG or WebP · up to 5 MB</small></label>
+        <label className="photo-field">Profile photo<input ref={fileRef} name="avatar" type="file" accept="image/jpeg,image/png,image/webp" required onChange={event => { const file = event.target.files?.[0] ?? null; const photoError = file ? profilePhotoError(file) : ""; if (photoError) { event.currentTarget.value = ""; setPhotoName(""); setError(photoError); return; } setError(""); setPhotoName(file?.name ?? ""); }}/><button type="button" onClick={() => fileRef.current?.click()}>{photoName || "Choose your photo"}</button><small>Required · JPG, PNG or WebP · up to 5 MB</small></label>
       </> : null}
       <label>Email address<input name="email" type="email" inputMode="email" autoComplete="email" required/></label>
       <label>Password<input name="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={mode === "signup" ? 10 : 1}/>{mode === "signup" ? <small>At least 10 characters with a letter and number.</small> : null}</label>
