@@ -76,6 +76,7 @@ test("the typed schema exports every production commerce table", async () => {
     "authIdentities",
     "authActionTokens",
     "accountDeletionRequests",
+    "sellerStoreClosureRequests",
   ];
 
   for (const exportName of requiredExports) {

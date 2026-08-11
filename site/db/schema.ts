@@ -345,10 +345,27 @@ export const accountDeletionRequests = sqliteTable("account_deletion_requests", 
   status: text("status").notNull().default("pending"),
   requestedAt: text("requested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   scheduledFor: text("scheduled_for").notNull(),
+  cancelledAt: text("cancelled_at"),
   completedAt: text("completed_at"),
 }, (table) => [
   uniqueIndex("account_deletion_requests_account_status_idx").on(table.accountEmail, table.status),
   index("account_deletion_requests_schedule_idx").on(table.status, table.scheduledFor),
+]);
+
+export const sellerStoreClosureRequests = sqliteTable("seller_store_closure_requests", {
+  id: text("id").primaryKey(),
+  sellerId: text("seller_id").notNull().references(() => sellerState.inviteToken, { onDelete: "restrict" }),
+  accountEmail: text("account_email").notNull().references(() => authAccounts.email, { onDelete: "restrict" }),
+  status: text("status").notNull().default("pending"),
+  previousProductStatusesJson: text("previous_product_statuses_json").notNull().default("{}"),
+  requestedAt: text("requested_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  scheduledFor: text("scheduled_for").notNull(),
+  cancelledAt: text("cancelled_at"),
+  completedAt: text("completed_at"),
+}, (table) => [
+  uniqueIndex("seller_store_closure_seller_status_idx").on(table.sellerId, table.status),
+  index("seller_store_closure_status_schedule_idx").on(table.status, table.scheduledFor),
+  index("seller_store_closure_account_idx").on(table.accountEmail, table.requestedAt),
 ]);
 
 export const authOauthStates = sqliteTable("auth_oauth_states", {
