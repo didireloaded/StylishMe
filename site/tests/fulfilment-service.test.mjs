@@ -58,7 +58,7 @@ test("seller delivery updates persist milestones and unlock payout only after de
   const db = database();
   const at = new Date("2026-07-29T10:00:00.000Z");
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "preparing", now: at });
-  await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "shipped", provider: "dhl", trackingNumber: "JD123", trackingUrl: "https://www.dhl.com/track?id=JD123", now: at });
+  await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "shipped", provider: "local courier", trackingNumber: "LC123", trackingUrl: "https://tracking.example/LC123", now: at });
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "in_transit", now: at });
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "out_for_delivery", now: at });
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "delivered", now: at });
@@ -66,7 +66,7 @@ test("seller delivery updates persist milestones and unlock payout only after de
   assert.equal(db.database.prepare("SELECT status FROM commerce_orders").get().status, "delivered");
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM shipment_events").get().count, 5);
   const customer = await getCustomerFulfilments(db, "customer@example.com", "order-1");
-  assert.equal(customer[0].trackingNumber, "JD123");
+  assert.equal(customer[0].trackingNumber, "LC123");
   assert.equal(customer[0].events.at(-1).status, "delivered");
   db.close();
 });
@@ -74,7 +74,7 @@ test("seller delivery updates persist milestones and unlock payout only after de
 test("store collection cannot accept courier data and completes on collection", async () => {
   const db = database("collection");
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "preparing" });
-  await assert.rejects(() => updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "ready_to_collect", provider: "dhl", trackingNumber: "123" }), /collection/i);
+  await assert.rejects(() => updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "ready_to_collect", provider: "local courier", trackingNumber: "123" }), /collection/i);
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "ready_to_collect" });
   await updateSellerFulfilment(db, "seller-1", "seller-order-1", { status: "collected" });
   const customer = await getCustomerFulfilments(db, "customer@example.com", "order-1");

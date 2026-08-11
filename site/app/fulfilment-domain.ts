@@ -59,8 +59,8 @@ export function assertFulfilmentTransition(
     throw new FulfilmentValidationError(`This order cannot move from ${current.replaceAll("_", " ")} to ${next.replaceAll("_", " ")}`);
   }
   if (kind === "delivery" && next === "shipped") {
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9 ._/-]{2,79}$/.test(trackingNumber)) throw new FulfilmentValidationError("Add a valid tracking number before marking this order shipped");
-    if (!provider) throw new FulfilmentValidationError("Choose the courier before marking this order shipped");
+    if (!provider) throw new FulfilmentValidationError("Add the delivery service before marking this order dispatched");
+    if (trackingNumber && !/^[a-zA-Z0-9][a-zA-Z0-9 ._/-]{2,79}$/.test(trackingNumber)) throw new FulfilmentValidationError("Tracking numbers must contain at least three letters or numbers");
   }
   if (trackingUrl) {
     try {

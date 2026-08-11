@@ -257,14 +257,14 @@ export default function SellerApp({
     <div className="filter-chips">{sellerOrderFilters.map(label => <button key={label} className={sellerOrderFilter === label ? "active" : ""} aria-pressed={sellerOrderFilter === label} onClick={() => setSellerOrderFilter(label)}>{label}</button>)}</div>
     <section className="seller-order-list">{visibleSellerOrders.map(order => {
       const nextStatus = nextSellerStatus(order);
-      const courier = courierDrafts[order.id] ?? { provider: "dhl", trackingNumber: "" };
+      const courier = courierDrafts[order.id] ?? { provider: "local courier", trackingNumber: "" };
       return <article className="form-card seller-order-card" key={order.id}>
         <div className="section-title"><div><small>{order.fulfilmentMethod === "collection" ? "STORE COLLECTION" : "DELIVERY"}</small><h2>{order.orderId}</h2></div><span className="status live">{order.statusLabel}</span></div>
         <p>{new Date(order.createdAt).toLocaleDateString("en-NA")} · N${order.subtotal.toLocaleString()}</p>
         <div className="order-piece-list">{order.items.map(item => <div key={`${order.id}-${item.productId}`}><strong>{item.name} × {item.quantity}</strong><small>{item.size}{item.colour ? ` · ${item.colour}` : ""}</small></div>)}</div>
         {order.deliveryAddress && <div className="seller-dispatch-address"><small>DELIVER TO</small><strong>{order.deliveryAddress.label}</strong><span>{order.deliveryAddress.street}, {order.deliveryAddress.city}</span></div>}
         {order.trackingNumber && <p><strong>{order.provider?.toUpperCase()}</strong> · {order.trackingNumber}</p>}
-        {nextStatus === "shipped" && <div className="form-pair"><label>Courier<select value={courier.provider} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, provider: event.target.value } }))}><option value="dhl">DHL</option><option value="local">Local courier</option></select></label><label>Tracking number<input value={courier.trackingNumber} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, trackingNumber: event.target.value } }))} placeholder="Required before shipping" /></label></div>}
+        {nextStatus === "shipped" && <div className="form-pair"><label>Delivery service<select value={courier.provider} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, provider: event.target.value } }))}><option value="local courier">Local courier</option><option value="store delivery">Store delivery</option><option value="customer arranged">Customer-arranged delivery</option></select></label><label>Tracking number · optional<input value={courier.trackingNumber} onChange={event => setCourierDrafts(current => ({ ...current, [order.id]: { ...courier, trackingNumber: event.target.value } }))} placeholder="Add only when provided" /></label></div>}
         {nextStatus && <button className="primary" disabled={busyOrderId === order.id} onClick={() => void advanceOrder(order)}>{busyOrderId === order.id ? "Saving…" : `Mark ${nextStatus.replaceAll("_", " ")}`}</button>}
         {!nextStatus && <small>Fulfilment complete · payout stays held until the return window closes.</small>}
       </article>;

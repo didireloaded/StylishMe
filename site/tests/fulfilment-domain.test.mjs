@@ -6,8 +6,9 @@ import { assertFulfilmentTransition, fulfilmentTimeline, payoutEligibilityDate }
 test("delivery and collection follow different irreversible paths", () => {
   assert.equal(assertFulfilmentTransition("delivery", "new", "preparing").status, "preparing");
   assert.equal(assertFulfilmentTransition("collection", "preparing", "ready_to_collect").status, "ready_to_collect");
-  assert.throws(() => assertFulfilmentTransition("collection", "preparing", "shipped", { provider: "dhl", trackingNumber: "123" }), /collection/i);
-  assert.throws(() => assertFulfilmentTransition("delivery", "preparing", "shipped"), /tracking number/i);
+  assert.throws(() => assertFulfilmentTransition("collection", "preparing", "shipped", { provider: "local courier", trackingNumber: "123" }), /collection/i);
+  assert.equal(assertFulfilmentTransition("delivery", "preparing", "shipped", { provider: "store delivery" }).trackingNumber, "");
+  assert.throws(() => assertFulfilmentTransition("delivery", "preparing", "shipped"), /delivery service/i);
   assert.throws(() => assertFulfilmentTransition("delivery", "new", "delivered"), /cannot move/i);
 });
 

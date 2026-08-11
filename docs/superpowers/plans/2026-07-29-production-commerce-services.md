@@ -4,9 +4,9 @@
 
 **Goal:** Replace StylishMe's remaining simulated commerce, fulfilment, account-recovery, seller-catalogue and sharing behavior with secure production-capable services, while keeping external money movement and identity providers disabled until verified credentials and merchant approvals are configured.
 
-**Architecture:** D1 becomes the authoritative catalogue, inventory, order, seller-order, payment, refund, settlement, shipment and account-token store. Customer, seller and admin clients consume role-scoped APIs; DPO Pay, DHL tracking, Resend, Google and Apple are isolated behind small server-only adapters with signed callbacks and explicit configuration checks. Existing editorial UI remains intact and switches from seeded data to normalized API records without exposing private customer information.
+**Architecture:** D1 becomes the authoritative catalogue, inventory, order, seller-order, payment, refund, settlement, shipment and account-token store. Customer, seller and admin clients consume role-scoped APIs; DPO Pay, Resend, Google and Apple are isolated behind small server-only adapters with signed callbacks and explicit configuration checks. Delivery tracking is provider-neutral and uses seller-confirmed milestones plus optional tracking details. Existing editorial UI remains intact and switches from seeded data to normalized API records without exposing private customer information.
 
-**Tech Stack:** Vinext/Next.js, React 19, TypeScript, Cloudflare Workers, D1, R2, Web Crypto, DPO Pay hosted checkout, DHL Unified Tracking API, Resend email API, Google OpenID Connect and Sign in with Apple.
+**Tech Stack:** Vinext/Next.js, React 19, TypeScript, Cloudflare Workers, D1, R2, Web Crypto, DPO Pay hosted checkout, Resend email API, Google OpenID Connect and Sign in with Apple.
 
 ## Global Constraints
 
@@ -145,16 +145,16 @@
 **Files:**
 - Create: `site/app/fulfilment.ts`
 - Create: `site/app/shipping/shipping-provider.ts`
-- Create: `site/app/shipping/dhl-tracking.ts`
+- Modify: `site/app/fulfilment-service.ts`
 - Create: `site/app/api/seller-orders/route.ts`
 - Create: `site/app/api/seller-orders/[orderId]/status/route.ts`
 - Create: `site/app/api/shipments/[shipmentId]/route.ts`
-- Create: `site/app/api/shipments/dhl/webhook/route.ts`
+- Modify: `site/app/api/orders/[orderId]/tracking/route.ts`
 - Modify: `site/app/SellerApp.tsx`
 - Modify: `site/app/StylishMeApp.tsx`
 - Modify: `site/.env.example`
 - Create: `site/tests/fulfilment.test.mjs`
-- Create: `site/tests/dhl-tracking.test.mjs`
+- Modify: `site/tests/fulfilment-service.test.mjs`
 
 **Interfaces:**
 - Produces validated delivery and collection state machines, seller-scoped fulfilment records, shipment events and customer-safe tracking summaries.
@@ -162,7 +162,7 @@
 - [ ] Write failing tests for seller ownership, legal status transitions, collection orders without courier tracking, webhook authentication, duplicate event handling and customer-safe projections.
 - [ ] Run focused tests and verify the missing implementation failures.
 - [ ] Implement seller order queues and fulfilment actions against normalized seller orders.
-- [ ] Implement DHL tracking lookup/push adapter and a manual tracking-number path for contracted Namibian couriers without public APIs.
+- [x] Implement provider-neutral seller-confirmed delivery milestones with optional tracking numbers and secure tracking URLs.
 - [ ] Replace fabricated timelines with stored shipment or collection events.
 - [ ] Run focused tests, interaction tests, type check and lint.
 - [ ] Commit the verified fulfilment release.
@@ -234,7 +234,7 @@
 - Create: `docs/production-service-activation.md`
 
 **Interfaces:**
-- Consumes verified DPO, Resend, Google, Apple and DHL credentials plus marketplace payout approval; produces live provider health checks and a deployable Sites archive.
+- Consumes verified DPO, Resend, Google and Apple credentials plus marketplace payout approval; produces live provider health checks and a deployable Sites archive.
 
 - [ ] Document exact callback URLs, required provider-console settings, secret names, rotation procedure and rollback switches.
 - [ ] Add provider health checks that expose configuration state without revealing secrets.
@@ -251,5 +251,5 @@
 - Resend account, verified StylishMe-owned sending domain, API key and From address.
 - Google Cloud web OAuth client with the production origin and callback URL authorized.
 - Apple Developer membership, primary App ID, Services ID, Team ID, Key ID and Sign in with Apple private key.
-- DHL developer application/API key or a contracted local courier's tracking specification and credentials.
+- A regulated seller-payout provider and confirmed marketplace settlement requirements.
 - A StylishMe-owned custom domain for stable OAuth callbacks, verified email sending and customer-facing branding.

@@ -8,7 +8,7 @@ The production code is fail-closed: a provider-backed feature is hidden or retur
 - Atomic stock reservation, multi-seller order allocation, reservation expiry, and scheduled cleanup.
 - DPO hosted checkout adapter, server-side payment verification, idempotent callbacks, bounded refunds, and automatic refund when a paid callback arrives after stock expiry.
 - Seller/platform double-entry settlement ledger. Payouts stay held; there is no manual “mark paid” escape hatch.
-- Seller delivery/collection fulfilment, customer milestone tracking, and real DHL tracking adapter. Collection orders never display courier tracking.
+- Seller delivery/collection fulfilment and customer milestone tracking. Sellers can record a delivery service plus optional tracking details; collection orders never display courier tracking.
 - Email ownership verification, password recovery, delayed/cancellable account deletion, provider revocation, and private-media deletion.
 - Google authorization-code + PKCE login and Apple form-post login, verified locally with provider JWKS. Social identities are keyed by provider subject and never silently linked to legacy email addresses.
 - Fifteen-minute scheduled maintenance for expired stock holds and due account deletions, plus catalogue-read stock cleanup as a fallback.
@@ -39,12 +39,6 @@ The production code is fail-closed: a provider-backed feature is hidden or retur
 - Configure the Team ID, Key ID, private signing key, and Services ID.
 - Verify first sign-in, returning sign-in, provider revocation, and deletion of an Apple-only account.
 
-### DHL tracking
-
-- Obtain a production DHL tracking subscription key; demo keys are deliberately rejected.
-- Confirm the seller enters the exact carrier and tracking number.
-- Test accepted, in-transit, exception, delivered, and unknown-shipment responses. Do not add a live map unless the carrier provides truthful location data.
-
 ### Seller payouts
 
 - Select a regulated payout provider that supports the required Namibia marketplace flow.
@@ -55,6 +49,6 @@ The production code is fail-closed: a provider-backed feature is hidden or retur
 ## Release checks
 
 - Confirm the host provisions the `*/15 * * * *` scheduled Worker trigger.
-- Confirm payment, OAuth, email, and courier configuration endpoints report unavailable before credentials and available only after complete configuration.
+- Confirm payment, OAuth, and email configuration endpoints report unavailable before credentials and available only after complete configuration.
 - Keep card data, full addresses, private photos, try-on images, provider credentials, and raw identity tokens out of logs and analytics.
 - Rotate any credential that has ever appeared in chat, logs, screenshots, or source control before production use.

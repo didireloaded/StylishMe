@@ -1,4 +1,3 @@
-import { currentDhlConfig, fetchDhlTracking, type DhlConfig } from "./courier-tracking";
 import {
   assertFulfilmentTransition,
   FulfilmentValidationError,
@@ -212,48 +211,4 @@ export async function updateSellerFulfilment(db: D1DatabaseLike, sellerId: strin
   const [updated] = await getSellerOrders(db, sellerId, sellerOrderId);
   if (!updated) throw new FulfilmentValidationError("Seller order could not be reloaded");
   return updated;
-}
-
-const progression = ["new", "preparing", "shipped", "in_transit", "out_for_delivery", "delivered"];
-
-export async function syncEligibleDhlShipments(
-  db: D1DatabaseLike,
-  customerEmail: string,
-  orderId: string,
-  config: DhlConfig = currentDhlConfig(),
-  fetcher: typeof fetch = fetch,
-  now = new Date(),
-) {
-  if (!config.available) return { available: false, synced: 0 };
-  const cutoff = new Date(now.getTime() - 15 * 60_000).toISOString();
-  const result = await db.prepare(`SELECT sh.id, sh.tracking_number, sh.status, so.id AS seller_order_id
-    FROM shipments sh JOIN seller_orders so ON so.id = sh.seller_order_id
-    JOIN commerce_orders o ON o.id = so.order_id
-    WHERE o.id = ? AND o.customer_email = ? AND sh.provider = 'dhl' AND sh.tracking_number IS NOT NULL
-      AND sh.status != 'delivered' AND (sh.last_synced_at IS NULL OR sh.last_synced_at < ?)`)
-    .bind(orderId, customerEmail, cutoff).all<{ id: string; tracking_number: string; status: string; seller_order_id: string }>();
-  let synced = 0;
-  for (const shipment of result.results ?? []) {
-    const remote = await fetchDhlTracking(config, shipment.tracking_number, fetcher);
-    const currentIndex = progression.indexOf(shipment.status);
-    const remoteIndex = progression.indexOf(remote.status);
-    const nextStatus = remoteIndex > currentIndex ? remote.status : shipment.status;
-    const timestamp = now.toISOString();
-    const complete = nextStatus === "delivered";
-    await db.batch([
-      db.prepare(`UPDATE shipments SET status = ?, tracking_url = COALESCE(?, tracking_url), estimated_delivery_at = ?,
-        last_synced_at = ?, updated_at = ? WHERE id = ?`).bind(nextStatus, remote.trackingUrl, remote.estimatedDeliveryAt, timestamp, timestamp, shipment.id),
-      db.prepare("UPDATE seller_orders SET status = ?, payout_eligible_at = CASE WHEN ? THEN COALESCE(payout_eligible_at, ?) ELSE payout_eligible_at END, updated_at = ? WHERE id = ?")
-        .bind(nextStatus, complete ? 1 : 0, complete ? payoutEligibilityDate(now) : null, timestamp, shipment.seller_order_id),
-      ...remote.events.map(event => db.prepare(`INSERT INTO shipment_events
-        (id, shipment_id, provider_event_id, status, description, location, occurred_at, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(shipment_id, provider_event_id) DO NOTHING`)
-        .bind(crypto.randomUUID(), shipment.id, event.providerEventId, event.status, event.description, event.location, event.occurredAt, timestamp)),
-      db.prepare(`UPDATE commerce_orders SET status = CASE
-        WHEN NOT EXISTS (SELECT 1 FROM seller_orders child WHERE child.order_id = commerce_orders.id AND child.status NOT IN ('delivered','collected'))
-        THEN 'delivered' ELSE status END, updated_at = ? WHERE id = ?`).bind(timestamp, orderId),
-    ]);
-    synced += 1;
-  }
-  return { available: true, synced };
 }

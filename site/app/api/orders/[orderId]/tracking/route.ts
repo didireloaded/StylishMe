@@ -1,7 +1,6 @@
 import { env } from "cloudflare:workers";
 
-import { currentDhlConfig } from "../../../../courier-tracking";
-import { getCustomerFulfilments, syncEligibleDhlShipments } from "../../../../fulfilment-service";
+import { getCustomerFulfilments } from "../../../../fulfilment-service";
 import { getStylishMeUser } from "../../../../stylishme-auth";
 
 const noStore = { "cache-control": "no-store" };
@@ -15,7 +14,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ord
     const owned = await env.DB.prepare("SELECT id FROM commerce_orders WHERE id = ? AND customer_email = ? LIMIT 1")
       .bind(orderId, user.email).first();
     if (!owned) return Response.json({ error: "Order not found" }, { status: 404, headers: noStore });
-    await syncEligibleDhlShipments(env.DB, user.email, orderId, currentDhlConfig()).catch(() => undefined);
     const fulfilments = await getCustomerFulfilments(env.DB, user.email, orderId);
     return Response.json({ fulfilments }, { headers: noStore });
   } catch {

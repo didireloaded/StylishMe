@@ -13,12 +13,23 @@ test("seller fulfilment API is authenticated, role-scoped, and owner-scoped", ()
   assert.match(route, /cache-control.*no-store/i);
 });
 
-test("customer tracking endpoint verifies order ownership and supports configured DHL sync", () => {
+test("customer tracking endpoint verifies order ownership without calling an external courier", () => {
   const route = read("../app/api/orders/[orderId]/tracking/route.ts");
   assert.match(route, /getStylishMeUser/);
   assert.match(route, /customer_email = \?/);
-  assert.match(route, /syncEligibleDhlShipments/);
+  assert.doesNotMatch(route, /DHL|syncEligibleDhlShipments/i);
   assert.match(route, /getCustomerFulfilments/);
+});
+
+test("seller fulfilment is provider-neutral and does not advertise DHL", () => {
+  const seller = read("../app/SellerApp.tsx");
+  const customer = read("../app/StylishMeApp.tsx");
+  const service = read("../app/fulfilment-service.ts");
+  assert.doesNotMatch(seller, /DHL/i);
+  assert.doesNotMatch(customer, /DHL/i);
+  assert.doesNotMatch(service, /DHL|syncEligibleDhlShipments/i);
+  assert.match(seller, /Delivery service/);
+  assert.match(seller, /Local courier/);
 });
 
 test("the UIs consume real seller orders and persisted tracking timelines", () => {

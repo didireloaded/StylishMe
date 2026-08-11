@@ -982,7 +982,6 @@ export default function StylishMeApp({
             const occurredAt = event?.occurredAt || (index === 0 ? fulfilment.createdAt : "");
             return <li className={index <= currentIndex ? "done" : ""} key={status}><i /><div><strong>{label}</strong><small>{occurredAt ? trackingTime(occurredAt) : index <= currentIndex ? "Confirmed" : "Pending"}{event?.location ? ` · ${event.location}` : ""}</small></div></li>;
           })}</ol>
-          {fulfilment.provider === "dhl" && <small>Delivered by DHL Group</small>}
         </section>;
       })}
       <button className="outline-button full" onClick={() => navigate("support")}>Contact support</button>
