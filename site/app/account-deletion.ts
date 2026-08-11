@@ -1,10 +1,25 @@
 import type { D1DatabaseLike } from "./inventory-reservations";
+import { recoveryDeadline, type AccountLifecycleBlocker, type LifecycleEligibility } from "./account-lifecycle";
 
 type MediaStore = { delete: (key: string) => Promise<unknown> };
 
+export async function checkAccountDeletionEligibility(db: D1DatabaseLike, email: string): Promise<LifecycleEligibility> {
+  const normalized = email.trim().toLowerCase();
+  const [store, orders] = await Promise.all([
+    db.prepare("SELECT COUNT(*) AS count FROM seller_state WHERE owner_email = ? AND approved = 1").bind(normalized).first<{ count: number }>(),
+    db.prepare("SELECT COUNT(*) AS count FROM commerce_orders WHERE customer_email = ? AND status NOT IN ('completed', 'cancelled', 'refunded')").bind(normalized).first<{ count: number }>(),
+  ]);
+  const blockers: AccountLifecycleBlocker[] = [];
+  if (Number(store?.count ?? 0)) blockers.push({ code: "active_seller_store", count: Number(store?.count), route: "/seller/settings" });
+  if (Number(orders?.count ?? 0)) blockers.push({ code: "active_order", count: Number(orders?.count), route: "/orders" });
+  return blockers.length ? { allowed: false, blockers } : { allowed: true, blockers: [] };
+}
+
 export async function scheduleAccountDeletion(db: D1DatabaseLike, email: string, now = new Date()) {
   const normalized = email.trim().toLowerCase();
-  const scheduledFor = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const eligibility = await checkAccountDeletionEligibility(db, normalized);
+  if (!eligibility.allowed) throw new Error("Resolve account obligations before deleting your account");
+  const scheduledFor = recoveryDeadline(now);
   const requestedAt = now.toISOString();
   const id = crypto.randomUUID();
   await db.prepare(`INSERT INTO account_deletion_requests (id, account_email, status, requested_at, scheduled_for, completed_at)
