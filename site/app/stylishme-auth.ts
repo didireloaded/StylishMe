@@ -6,6 +6,7 @@ export type StylishMeUser = { displayName: string; email: string; fullName: stri
 const COOKIE = "stylishme_session";
 const SESSION_SECONDS = 60 * 60 * 24 * 30;
 const encoder = new TextEncoder();
+export const PASSWORD_HASH_ITERATIONS = 100_000;
 const runtime = async () => (await import("cloudflare:workers")).env;
 
 const base64 = (bytes: Uint8Array) => {
@@ -37,7 +38,7 @@ export async function ensureAuthTables() {
 
 export async function createPasswordHash(password: string, salt = randomToken(18)) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]);
-  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: encoder.encode(salt), iterations: 210_000 }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: encoder.encode(salt), iterations: PASSWORD_HASH_ITERATIONS }, key, 256);
   return { hash: base64(new Uint8Array(bits)), salt };
 }
 

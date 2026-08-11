@@ -9,7 +9,7 @@ import {
   confirmAccountDeletionConfirmation,
   resetPasswordWithToken,
 } from "../app/auth-actions.ts";
-import { passwordMatches } from "../app/stylishme-auth.ts";
+import { PASSWORD_HASH_ITERATIONS, passwordMatches } from "../app/stylishme-auth.ts";
 import { currentEmailConfig, sendTransactionalEmail } from "../app/transactional-email.ts";
 import { SqliteD1 } from "./sqlite-d1.mjs";
 
@@ -33,6 +33,10 @@ function database() {
 }
 
 const emailConfig = { available: true, apiKey: "re_live", from: "StylishMe <hello@stylishme.na>", publicOrigin: "https://stylishme.na" };
+
+test("password hashing stays within the production runtime PBKDF2 limit", () => {
+  assert.equal(PASSWORD_HASH_ITERATIONS, 100_000);
+});
 
 test("transactional email is unavailable until every production value exists", () => {
   assert.equal(currentEmailConfig({ RESEND_API_KEY: "key" }).available, false);
