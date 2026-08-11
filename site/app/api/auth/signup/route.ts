@@ -9,6 +9,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function POST(request: Request) {
   let avatarKey = "";
   let createdAccount = "";
+  let stage = "request_validation";
   try {
     const contentLength = Number(request.headers.get("content-length") ?? "0");
     if (contentLength > 6 * 1024 * 1024) return Response.json({ error: "Account request is too large" }, { status: 413 });
@@ -27,19 +28,25 @@ export async function POST(request: Request) {
     if (!emailPattern.test(email)) return Response.json({ error: "Enter a valid email address" }, { status: 400 });
     if (password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) return Response.json({ error: "Use at least 10 characters with a letter and number" }, { status: 400 });
     if (!(avatar instanceof File) || !avatar.size || avatar.size > 5 * 1024 * 1024) return Response.json({ error: "Profile photo is required and must be under 5 MB" }, { status: 400 });
+    stage = "profile_image";
     const processed = await inspectProfileImage(new Uint8Array(await avatar.arrayBuffer()), avatar.type);
+    stage = "auth_storage_ready";
     await ensureAuthTables();
     const existing = await env.DB.prepare("SELECT email FROM auth_accounts WHERE email = ?").bind(email).first();
     if (existing) return Response.json({ error: "An account already exists for this email" }, { status: 409 });
+    stage = "password_hash";
     const passwordRecord = await createPasswordHash(password);
     avatarKey = `profile-photos/${crypto.randomUUID()}.${processed.extension}`;
+    stage = "profile_photo_storage";
     await env.MEDIA.put(avatarKey, processed.bytes, { httpMetadata: { contentType: processed.contentType } });
     const now = new Date().toISOString();
+    stage = "account_storage";
     await env.DB.batch([
       env.DB.prepare("INSERT INTO auth_accounts (email, name, password_hash, password_salt, avatar_key, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(email, name, passwordRecord.hash, passwordRecord.salt, avatarKey, now, now),
       env.DB.prepare("INSERT INTO customer_state (email, cart_json, wishlist_json, orders_json, profile_json, updated_at) VALUES (?, '[]', '[]', '[]', ?, ?) ON CONFLICT(email) DO UPDATE SET profile_json = excluded.profile_json, updated_at = excluded.updated_at").bind(email, JSON.stringify({ accountRole: role, displayName: name }), now),
     ]);
     createdAccount = email;
+    stage = "verification_email";
     await requestEmailVerification(env.DB, email, emailConfig);
     return Response.json({ success: true, verificationRequired: true, returnTo: `/login?reason=check-email&returnTo=${encodeURIComponent(returnTo)}` }, { status: 201, headers: { "cache-control": "no-store" } });
   } catch (error) {
@@ -54,7 +61,11 @@ export async function POST(request: Request) {
           : "Account email could not be sent. Please try again shortly";
       return Response.json({ error: message }, { status: 503, headers: { "cache-control": "no-store" } });
     }
-    console.error("Signup failed", { reason: error instanceof Error ? error.name : "unknown" });
+    console.error("Signup failed", {
+      stage,
+      reason: error instanceof Error ? error.name : "unknown",
+      detail: error instanceof Error ? error.message.slice(0, 160) : "unknown",
+    });
     return Response.json({ error: "Unable to create your account right now" }, { status: 500 });
   }
 }

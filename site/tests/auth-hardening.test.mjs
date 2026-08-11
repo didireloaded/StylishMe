@@ -75,6 +75,11 @@ test("StylishMe account signup requires a profile photo and secure password", as
   assert.doesNotMatch(form, /ChatGPT/i);
   assert.match(signup, /avatar instanceof File/);
   assert.match(signup, /createPasswordHash/);
+  assert.match(signup, /stage = "profile_image"/);
+  assert.match(signup, /stage = "password_hash"/);
+  assert.match(signup, /stage = "profile_photo_storage"/);
+  assert.match(signup, /stage = "account_storage"/);
+  assert.match(signup, /stage = "verification_email"/);
   assert.match(auth, /PBKDF2/);
   assert.match(auth, /HttpOnly/);
   assert.match(auth, /SameSite=Lax/);
