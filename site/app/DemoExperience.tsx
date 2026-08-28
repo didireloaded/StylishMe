@@ -95,26 +95,26 @@ export default function DemoExperience() {
     return (
       <main className="demo-stage">
         <section className="demo-shell demo-choice">
-          <header><button onClick={() => window.location.assign("/")}>STYLISHME</button><span>INTERACTIVE PREVIEW</span></header>
+          <header><button onClick={() => window.location.assign("/")}>STYLISHME</button></header>
           <div className="demo-intro">
             <small>SEE IT FROM BOTH SIDES</small>
             <h1>Meet StylishMe before you join.</h1>
-            <p>Choose the experience that matters to you. You can take a short guided tour, explore the working preview and switch sides at any time.</p>
+            <p>Choose the side you want to explore. Move through a quick preview, then switch sides whenever you want.</p>
           </div>
           <div className="demo-role-grid">
             <button onClick={() => choose("customer")}>
               <img src={tours.customer[0].image} alt="" />
-              <span>01</span><small>I’M HERE TO SHOP</small>
+              <small>I’M HERE TO SHOP</small>
               <strong>Explore as a customer</strong>
               <p>Discover looks, stores and designers, then try the shopping journey.</p>
-              <b>Start customer tour →</b>
+              <b>Start →</b>
             </button>
             <button onClick={() => choose("seller")}>
               <img src={tours.seller[0].image} alt="" />
-              <span>02</span><small>I SELL FASHION</small>
+              <small>I SELL FASHION</small>
               <strong>Explore as a seller</strong>
               <p>See how a store, collection, orders and shareable links come together.</p>
-              <b>Start seller tour →</b>
+              <b>Start →</b>
             </button>
           </div>
           <p className="demo-note">No account is needed for the preview. Nothing you change here is published.</p>
@@ -128,9 +128,9 @@ export default function DemoExperience() {
   return (
     <main className="demo-stage">
       <section className="demo-shell demo-tour">
-        <header><button onClick={() => setStage("choose")}>← Choose another view</button><span>{role.toUpperCase()} TOUR</span></header>
+        <header><button onClick={() => setStage("choose")}>← Choose another view</button><span>{role === "seller" ? "SELLER" : "CUSTOMER"}</span></header>
         <article>
-          <div className="demo-tour-photo"><img src={item.image} alt="" /><span>{String(slide + 1).padStart(2, "0")}</span></div>
+          <div className="demo-tour-photo"><img src={item.image} alt="" /></div>
           <div className="demo-tour-copy">
             <small>{item.eyebrow}</small>
             <h1>{item.title}</h1>
@@ -141,7 +141,7 @@ export default function DemoExperience() {
             <div className="demo-actions">
               {slide > 0 && <button onClick={() => setSlide(value => value - 1)}>Back</button>}
               {!last && <button className="primary" onClick={() => setSlide(value => value + 1)}>Next</button>}
-              {last && <button className="primary" onClick={() => setStage("explore")}>Explore the working demo</button>}
+              {last && <button className="primary" onClick={() => setStage("explore")}>Open the preview</button>}
             </div>
             {!last ? <button className="demo-skip" onClick={() => setStage("explore")}>Skip to the demo</button> : <a className="demo-join" href={joinUrl(role)}>Ready? Sign up as {role === "seller" ? "a vendor" : "a customer"}</a>}
           </div>

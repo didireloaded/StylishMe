@@ -4440,7 +4440,7 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 30px;
+  padding: 22px 30px;
   border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 
@@ -4467,7 +4467,7 @@ textarea:focus-visible {
 
 .demo-intro {
   max-width: 720px;
-  padding: 70px 30px 34px;
+  padding: 54px 30px 28px;
 }
 
 .demo-intro > small,
@@ -4506,8 +4506,8 @@ textarea:focus-visible {
 
 .demo-role-grid > button {
   position: relative;
-  min-height: 360px;
-  padding: 26px;
+  min-height: 390px;
+  padding: 28px;
   overflow: hidden;
   color: #fff;
   text-align: left;
@@ -4519,9 +4519,9 @@ textarea:focus-visible {
 
 .demo-role-grid > button::after {
   position: absolute;
-  inset: 25% 0 0;
+  inset: 0;
   content: "";
-  background: linear-gradient(transparent, rgba(7, 10, 12, .94));
+  background: linear-gradient(180deg, rgba(7, 10, 12, .08), rgba(7, 10, 12, .38) 42%, rgba(7, 10, 12, .94));
 }
 
 .demo-role-grid img {
@@ -4549,13 +4549,8 @@ textarea:focus-visible {
   display: block;
 }
 
-.demo-role-grid span {
-  margin-bottom: 140px;
-  font-family: Georgia, serif;
-  font-size: 24px;
-}
-
 .demo-role-grid small {
+  margin-top: 210px;
   margin-bottom: 8px;
   color: #ffb0a4;
   font-size: 9px;
@@ -4589,13 +4584,13 @@ textarea:focus-visible {
 
 .demo-tour > article {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr);
+  grid-template-columns: minmax(0, 1.18fr) minmax(330px, .82fr);
   min-height: calc(100svh - 126px);
 }
 
 .demo-tour-photo {
   position: relative;
-  min-height: 620px;
+  min-height: 660px;
 }
 
 .demo-tour-photo img {
@@ -4611,19 +4606,11 @@ textarea:focus-visible {
   background: linear-gradient(90deg, transparent 60%, rgba(12, 17, 22, .24));
 }
 
-.demo-tour-photo span {
-  position: absolute;
-  z-index: 1;
-  right: 24px;
-  bottom: 20px;
-  font: 400 72px/1 Georgia, serif;
-}
-
 .demo-tour-copy {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 50px;
+  padding: 42px;
 }
 
 .demo-tour-copy h1 {
@@ -4753,11 +4740,11 @@ textarea:focus-visible {
   }
 
   .demo-shell > header {
-    padding: 20px;
+    padding: 18px 20px;
   }
 
   .demo-intro {
-    padding: 46px 20px 28px;
+    padding: 34px 20px 24px;
   }
 
   .demo-role-grid {
@@ -4766,11 +4753,11 @@ textarea:focus-visible {
   }
 
   .demo-role-grid > button {
-    min-height: 300px;
+    min-height: 330px;
   }
 
-  .demo-role-grid span {
-    margin-bottom: 90px;
+  .demo-role-grid small {
+    margin-top: 150px;
   }
 
   .demo-note {
@@ -4782,15 +4769,11 @@ textarea:focus-visible {
   }
 
   .demo-tour-photo {
-    min-height: 43svh;
+    min-height: 52svh;
   }
 
   .demo-tour-copy {
-    padding: 34px 20px 44px;
-  }
-
-  .demo-tour-photo span {
-    font-size: 48px;
+    padding: 26px 20px 38px;
   }
 
   .demo-explore-shell {
