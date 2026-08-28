@@ -230,12 +230,40 @@ export default function SellerApp({
   let content;
   if (view === "today") content = <>
     {header()}
-    <section className="welcome"><div><small>GOOD MORNING</small><h1>Good morning, {state.store.owner}.</h1><p>Here is what is happening with your store today.</p></div><span>{state.store.approved ? "Store open" : "Finish setup"}</span></section>
-    <section className="editorial-hero"><img src={(live[0] ?? state.products[0])?.images[0] ?? images[0]} alt="" /><div><small>YOUR SHOP TODAY</small><h2>{pieces} pieces ready to be discovered.</h2><p>{live.length} published products · {low.length} need stock attention</p><button onClick={() => go("add")}>Add product</button></div></section>
-    <section className="seller-performance" aria-labelledby="seller-performance-title"><div className="section-title"><div><small>STORE PERFORMANCE</small><h2 id="seller-performance-title">Truthful business signals.</h2></div></div><div><article><small>Sales</small><strong>Sales unavailable</strong><span>Payment provider not connected</span></article><article><small>Published</small><strong>{live.length}</strong><span>{state.products.length} total products</span></article><article><small>Available units</small><strong>{pieces}</strong><span>{low.length} low-stock products</span></article></div></section>
-    <section><div className="section-title"><div><small>AT A GLANCE</small><h2>Marketplace status</h2></div><button onClick={() => go("collection")}>View products</button></div><div className="status-stories">{[["Published", live.length], ["Needs details", state.products.filter(p => p.status === "Changes requested").length], ["Low stock", low.length], ["Orders", sellerOrders.length]].map(([label, value]) => <button key={label} onClick={() => go(label === "Orders" ? "orders" : label === "Low stock" ? "inventory" : "collection")}><span>{value}</span><small>{label}</small></button>)}</div></section>
-    <section><div className="section-title"><div><small>NEEDS ATTENTION</small><h2>Clear work for today.</h2></div></div><div className="attention-list">{low.length > 0 && <button onClick={() => go("inventory")}><i className="coral" /><div><strong>{low.length} {low.length === 1 ? "product is" : "products are"} almost out of stock</strong><small>Open variant inventory and record a reason for every adjustment.</small></div><b>→</b></button>}{state.products.some(p => p.status === "Changes requested") && <button onClick={() => go("collection")}><i className="lilac" /><div><strong>Product details need changes</strong><small>Complete the listing before it can publish.</small></div><b>→</b></button>}{!low.length && !state.products.some(p => p.status === "Changes requested") && <div className="seller-empty"><strong>Nothing urgent right now</strong><small>New orders and stock issues will appear here when real records are available.</small></div>}</div></section>
-    <section className="share-card"><div><small>YOUR STOREFRONT</small><h2>Share your store</h2><p>Send customers directly to your StylishMe collection.</p></div><button onClick={() => copy(storeShareUrl(state.store.name), "Store link copied")}><Icon name="share" /> Copy link</button></section>
+    <section className="seller-command">
+      <div className="seller-command-copy">
+        <small>TODAY</small>
+        <h1>Good morning, {state.store.owner}.</h1>
+        <p>{state.store.name} is {state.store.approved ? "open" : "almost ready"}. Start with the work that changes what customers see.</p>
+      </div>
+      <div className="seller-command-actions">
+        <span>{state.store.approved ? "Store open" : "Finish setup"}</span>
+        <button className="primary" onClick={() => go("add")}>Add product</button>
+      </div>
+    </section>
+    <section className="seller-today-grid">
+      <article className="seller-focus-card">
+        <div className="section-title"><div><small>NEXT BEST ACTION</small><h2>Clear the shelf.</h2></div></div>
+        <div className="priority-list">
+          {low.length > 0 && <button onClick={() => go("inventory")}><i className="coral" /><span><strong>{low.length} low-stock {low.length === 1 ? "piece" : "pieces"}</strong><small>Update sizes before customers find an unavailable item.</small></span><b>→</b></button>}
+          {state.products.some(p => p.status === "Changes requested") && <button onClick={() => go("collection")}><i className="lilac" /><span><strong>Listing details need review</strong><small>Finish product copy, stock, or images before publishing.</small></span><b>→</b></button>}
+          {!low.length && !state.products.some(p => p.status === "Changes requested") && <div className="seller-empty"><strong>Nothing urgent right now</strong><small>New orders and stock issues will appear here when real records are available.</small></div>}
+        </div>
+      </article>
+      <article className="seller-metric-stack">
+        <button onClick={() => go("collection")}><small>Published</small><strong>{live.length}</strong><span>{state.products.length} total products</span></button>
+        <button onClick={() => go("inventory")}><small>Available units</small><strong>{pieces}</strong><span>{low.length} low-stock products</span></button>
+        <button onClick={() => go("orders")}><small>Orders</small><strong>{sellerOrders.length}</strong><span>{demoMode ? "Preview only" : "Verified orders"}</span></button>
+      </article>
+    </section>
+    <section className="seller-store-strip">
+      <div>
+        <small>STOREFRONT</small>
+        <h2>{state.store.name}</h2>
+        <p>{state.store.story}</p>
+      </div>
+      <button onClick={() => copy(storeShareUrl(state.store.name), "Store link copied")}><Icon name="share" /> Copy link</button>
+    </section>
   </>;
   else if (view === "collection") content = <>
     {header("Your collection")}<section className="page-intro"><small>YOUR PIECES</small><h1>Your collection</h1><p>Published pieces and anything that still needs a detail before it can go live.</p><button className="primary" onClick={() => go("add")}>Add a new piece</button></section>
@@ -289,6 +317,5 @@ export default function SellerApp({
   </>;
 
   const tabs: Array<[string, View, string]> = [["Home", "today", "home"], ["Orders", "orders", "orders"], ["Products", "collection", "collection"], ["Inventory", "inventory", "plus"], ["More", "more", "store"]];
-  const desktop: Array<[string, View]> = [["Overview","today"],["Orders","orders"],["Products","collection"],["Inventory","inventory"],["Collections","more"],["Customers","more"],["Reviews & Questions","more"],["Analytics","more"],["Payouts","payouts"],["Store Profile","store"],["Notifications","notifications"],["Settings","settings"]];
-  return <main className="seller-stage"><aside className="seller-desktop-nav"><div className="wordmark"><span>STYLISHME</span><small>SELLER</small></div><nav>{desktop.map(([label,target]) => <button key={label} className={view === target ? "active" : ""} onClick={() => go(target)}>{label}</button>)}</nav><button className="desktop-add" onClick={() => go("add")}>Add product</button></aside><div className="seller-app"><div className="seller-content">{content}</div><nav className="seller-bottom-nav">{tabs.map(([label, target, icon]) => <button key={target} className={view === target ? "active" : ""} aria-current={view === target ? "page" : undefined} onClick={() => go(target)}><Icon name={icon} /><span>{label}</span></button>)}</nav>{toast && <div className="seller-toast" role="status">{toast}</div>}</div></main>;
+  return <main className="seller-stage"><div className="seller-app"><div className="seller-content">{content}</div><nav className="seller-bottom-nav">{tabs.map(([label, target, icon]) => <button key={target} className={view === target ? "active" : ""} aria-current={view === target ? "page" : undefined} onClick={() => go(target)}><Icon name={icon} /><span>{label}</span></button>)}</nav>{toast && <div className="seller-toast" role="status">{toast}</div>}</div></main>;
 }
