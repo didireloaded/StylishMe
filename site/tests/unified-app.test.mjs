@@ -83,7 +83,7 @@ test("seller home remains useful and safe while a new store has no products yet"
 
   render(React.createElement(SellerApp));
   assert.ok(await screen.findByRole("heading", { name: "Good morning, Nela." }));
-  assert.ok(screen.getByText("Sales unavailable"));
+  assert.ok(screen.getByText("Nothing urgent right now"));
   assert.ok(screen.queryByText("N$12,640") === null);
   assert.ok(screen.getAllByRole("button", { name: "Add product" }).length >= 1);
   cleanup();
@@ -91,7 +91,7 @@ test("seller home remains useful and safe while a new store has no products yet"
 
 test("seller workspace exposes phase-one operations without invented finance data", async () => {
   const seller = await read("app/SellerApp.tsx");
-  for (const area of ["Overview", "Orders", "Products", "Inventory", "Payouts", "Store Profile", "Notifications", "Settings"]) {
+  for (const area of ["Home", "Orders", "Products", "Inventory", "Payouts", "Collections", "Customers", "Reviews & Questions", "Analytics", "Notifications", "Settings"]) {
     assert.match(seller, new RegExp(area));
   }
   assert.match(seller, /Stock by variant/);
