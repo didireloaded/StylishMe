@@ -196,7 +196,7 @@ export default function StylishMeApp({
   user,
   demoMode = false,
 }: {
-  user: { name: string; email: string; avatarUrl: string } | null;
+  user: { name: string; email: string; avatarUrl?: string | null } | null;
   demoMode?: boolean;
 }) {
   const [catalogueProducts, setCatalogueProducts] = useState<Product[]>(seededProducts);
@@ -261,6 +261,11 @@ export default function StylishMeApp({
   const [addressEditor, setAddressEditor] = useState<AddressEditor | null>(null);
   const [supportTopic, setSupportTopic] = useState<string | null>(null);
   const stateStorageKey = demoMode ? "stylishme-demo-customer-state" : `stylishme-state:${user?.email ?? "signed-out"}`;
+  const loginFor = (returnTo = "/") => {
+    if (demoMode || user) return false;
+    window.location.href = `/login?returnTo=${encodeURIComponent(returnTo)}`;
+    return true;
+  };
 
   useEffect(() => {
     let active = true;
@@ -341,6 +346,24 @@ export default function StylishMeApp({
   };
 
   useEffect(() => {
+    if (!user) {
+      const saved = localStorage.getItem(stateStorageKey);
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          setCart(state.cart ?? []);
+          setWishlist(state.wishlist ?? []);
+          setOrders(state.orders ?? []);
+          setProfile((current) => ({ ...current, ...(state.profile ?? {}) }));
+          setSavedOutfits(state.savedOutfits ?? []);
+          setAddresses(state.addresses ?? defaultAddresses);
+          setFollowedDesigners(state.followedDesigners ?? []);
+          setDataLight(Boolean(state.dataLight));
+        } catch {}
+      }
+      setHydrated(true);
+      return;
+    }
     const stateUrl = user ? "/api/state?account=1" : "/api/state";
     fetch(stateUrl).then(response => {
       if (response.status === 401) {
@@ -355,14 +378,14 @@ export default function StylishMeApp({
         let nextCart = state.cart ?? [];
         let nextWishlist = state.wishlist ?? [];
         if (user) {
-          const guestRaw = localStorage.getItem("stylishme-state:guest");
+          const guestRaw = localStorage.getItem("stylishme-state:signed-out");
           if (guestRaw) {
             try {
               const guestState = JSON.parse(guestRaw);
               const merged = mergeGuestShoppingState({ cart: nextCart, wishlist: nextWishlist }, guestState);
               nextCart = mergeCartLinesWithinStock([], merged.cart, productById).lines;
               nextWishlist = merged.wishlist.filter(id => productById.has(id));
-              localStorage.removeItem("stylishme-state:guest");
+              localStorage.removeItem("stylishme-state:signed-out");
               setToast("Your guest bag and wishlist were added");
             } catch {}
           }
@@ -404,6 +427,7 @@ export default function StylishMeApp({
     if (!hydrated) return;
     const state = { cart, wishlist, orders, profile, savedOutfits, addresses, followedDesigners, dataLight };
     localStorage.setItem(stateStorageKey, JSON.stringify(state));
+    if (!user) return;
     const serverState = { ...state, profile: { ...profile, addresses, followedDesigners, dataLight } };
     const timer = window.setTimeout(() => fetch("/api/state", { method: "POST", headers: { "content-type": "application/json", ...(user ? { "x-stylishme-account": "1" } : {}) }, body: JSON.stringify(serverState) }).then(response => {
       if (response.status === 401) window.location.replace(`/login?reason=expired&returnTo=${encodeURIComponent(view === "orders" ? "/orders" : view === "profile" ? "/profile" : "/")}`);
@@ -481,12 +505,14 @@ export default function StylishMeApp({
   };
   const openOutfit = (id: string, focused = false) => { trackActivity("outfit_viewed", "outfit", id); setSavedOutfitMode(false); setFocusedOutfitId(focused ? id : null); setSelectedOutfitId(id); setActiveStoryId(null); navigate("outfits"); };
   const openSavedOutfits = () => {
+    if (loginFor("/?view=outfits")) return;
     setFocusedOutfitId(null);
     setSavedOutfitMode(true);
     if (savedOutfits.length) setSelectedOutfitId(savedOutfits[0]);
     navigate("outfits");
   };
   const startTryOn = (productIds: string[], intent: "style" | "try-on" = "try-on") => {
+    if (loginFor("/?view=try-on")) return;
     const validIds = [...new Set(productIds)].filter((id) => productById.has(id));
     setTryOnProductIds(validIds.length ? validIds : [selected.id]);
     setTryOnIntent(intent);
@@ -494,10 +520,12 @@ export default function StylishMeApp({
     navigate("try-on");
   };
   const toggleWishlist = (id: string) => {
+    if (loginFor(window.location.pathname + window.location.search)) return;
     setWishlist(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
     setToast(wishlist.includes(id) ? "Removed from wishlist" : "Saved to wishlist");
   };
   const toggleSavedOutfit = (id: string) => {
+    if (loginFor("/?view=outfits")) return;
     setSavedOutfits((current) => current.includes(id)
       ? current.filter((item) => item !== id)
       : [...current, id]);
@@ -521,8 +549,12 @@ export default function StylishMeApp({
     setCart(result.lines);
     setToast("Added to cart");
   };
-  const addToCart = (product = selected) => addProductVariantToCart(product, selectedSize, selectedColor);
+  const addToCart = (product = selected) => {
+    if (loginFor(`/?view=product&product=${product.id}`)) return;
+    addProductVariantToCart(product, selectedSize, selectedColor);
+  };
   const quickAddWishlistItem = (product: Product) => {
+    if (loginFor(`/?view=product&product=${product.id}`)) return;
     const recommendation = product.category === "Shoes" ? profile.shoe : profile.size;
     const size = getSizeStock(product, recommendation) > 0 ? recommendation : getFirstStockedSize(product);
     if (!size || !product.colors[0]) {
@@ -532,6 +564,7 @@ export default function StylishMeApp({
     addProductVariantToCart(product, size, product.colors[0]);
   };
   const addTryOnProductsToCart = (productIds: string[]) => {
+    if (loginFor("/?view=try-on")) return;
     const candidates = productIds.flatMap((productId) => {
       const product = productById.get(productId);
       if (!product) return [];
@@ -557,6 +590,7 @@ export default function StylishMeApp({
     });
   };
   const commitOutfitAdd = (outfitId: string, sizeSelections: Record<string, string>, productIds?: string[]) => {
+    if (loginFor("/?view=outfits")) return;
     const outfitProducts = getOutfitProducts(outfitId, productIds);
     const unavailableCount = outfitProducts.filter((product) => !getFirstStockedSize(product)).length;
     const requested = outfitProducts.flatMap((product): CartLine[] => {
@@ -580,6 +614,7 @@ export default function StylishMeApp({
     setToast(notes.length ? `${addedCopy} · ${notes.join(" · ")}` : `${addedCopy} to cart`);
   };
   const addOutfitToCart = (outfitId: string, productIds?: string[]) => {
+    if (loginFor("/?view=outfits")) return;
     const outfitProducts = getOutfitProducts(outfitId, productIds);
     const unavailableCount = outfitProducts.filter((product) => !getFirstStockedSize(product)).length;
     const selectionProductIds = outfitProducts.filter((product) => {
@@ -642,6 +677,7 @@ export default function StylishMeApp({
   };
   const placeOrder = async () => {
     if (placingOrder) return;
+    if (loginFor("/?view=cart")) return;
     const fulfilment = delivery as FulfilmentMethod;
     if (demoMode) {
       const now = new Date();
@@ -689,6 +725,7 @@ export default function StylishMeApp({
     }
   };
   const toggleDesignerFollow = () => {
+    if (loginFor(`/?view=designer&designer=${encodeURIComponent(selectedDesigner)}`)) return;
     setFollowedDesigners((current) => current.includes(selectedDesigner)
       ? current.filter((designer) => designer !== selectedDesigner)
       : [...current, selectedDesigner]);
@@ -717,6 +754,7 @@ export default function StylishMeApp({
     }
   };
   const saveAddress = () => {
+    if (loginFor("/?view=addresses")) return;
     if (!addressEditor) return;
     const clean = { label: addressEditor.label.trim(), street: addressEditor.street.trim(), city: addressEditor.city.trim() };
     if (!clean.label || !clean.street || !clean.city) return;
@@ -749,7 +787,7 @@ export default function StylishMeApp({
   const activeFilterCount = Object.entries(shopFilters)
     .filter(([key, value]) => value !== DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState]).length;
 
-  const cartButton = () => <button className="circle-btn" onClick={() => navigate("cart")} aria-label={`Open cart, ${cartCount} items`}><Icon name="bag" />{cartCount ? <i>{cartCount}</i> : null}</button>;
+  const cartButton = () => <button className="circle-btn" onClick={() => { if (!loginFor("/?view=cart")) navigate("cart"); }} aria-label={`Open cart, ${cartCount} items`}><Icon name="bag" />{cartCount ? <i>{cartCount}</i> : null}</button>;
   const openStoryComposer = () => {
     if (!user) { window.location.href = "/login?returnTo=/"; return; }
     if (!eligibleStoryItems.length) { setToast("Share an outfit after an order is delivered or collected"); navigate("orders"); return; }
@@ -996,7 +1034,7 @@ export default function StylishMeApp({
     </>;
   }  else if (view === "profile") {
     const profileCollections: Array<[string, View]> = [["Style Me", "try-on"], ["My wardrobe", "wardrobe"], ["Wishlist", "wishlist"], ["Saved outfits", "outfits"]];
-    content = <>{header("Profile")}<section className="profile-head"><div className="avatar profile-photo">{user ? <img src={user.avatarUrl} alt={`${user.name}'s profile`} /> : "S"}</div><h1>{user?.name ?? "StylishMe preview"}</h1><p>{profile.city}, Namibia</p><div><strong>{orders.length}<small>Orders</small></strong><strong>{wishlist.length}<small>Wishlist</small></strong><strong>{profile.size}<small>Fit size</small></strong></div>{user ? <LogoutButton email={user.email} /> : null}</section><div className="profile-menu profile-collections">{profileCollections.map(([label, target]) => <button key={label} onClick={() => target === "outfits" ? openSavedOutfits() : target === "try-on" ? startTryOn([selected.id], "style") : navigate(target)}><span>{label}</span><small>{label === "Wishlist" ? wishlist.length : label === "Saved outfits" ? savedOutfits.length : label === "Style Me" ? "Your personal edit" : "Your edit"}</small><b>›</b></button>)}</div><div className="profile-menu">{[["My orders", "orders"], ["Saved addresses", "addresses"], ["Fit Passport", "settings"], ["Notifications", "notifications"], ["Help & support", "support"], ["Settings", "settings"]].map(([label, target]) => <button key={label} onClick={() => { if (target === "addresses") setAddressesReturnView("profile"); navigate(target as View); }}><span>{label}</span><b>›</b></button>)}</div></>;
+    content = <>{header("Profile")}<section className="profile-head"><div className="avatar profile-photo">{user?.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name}'s profile`} /> : "S"}</div><h1>{user?.name ?? "StylishMe preview"}</h1><p>{profile.city}, Namibia</p><div><strong>{orders.length}<small>Orders</small></strong><strong>{wishlist.length}<small>Wishlist</small></strong><strong>{profile.size}<small>Fit size</small></strong></div>{user ? <LogoutButton email={user.email} /> : null}</section><div className="profile-menu profile-collections">{profileCollections.map(([label, target]) => <button key={label} onClick={() => target === "outfits" ? openSavedOutfits() : target === "try-on" ? startTryOn([selected.id], "style") : navigate(target)}><span>{label}</span><small>{label === "Wishlist" ? wishlist.length : label === "Saved outfits" ? savedOutfits.length : label === "Style Me" ? "Your personal edit" : "Your edit"}</small><b>›</b></button>)}</div><div className="profile-menu">{[["My orders", "orders"], ["Saved addresses", "addresses"], ["Fit Passport", "settings"], ["Notifications", "notifications"], ["Help & support", "support"], ["Settings", "settings"]].map(([label, target]) => <button key={label} onClick={() => { if (target === "addresses") setAddressesReturnView("profile"); navigate(target as View); }}><span>{label}</span><b>›</b></button>)}</div></>;
   }
   else if (view === "wardrobe") content = <>{header("My Wardrobe", "profile")}<section className="wardrobe-intro"><small>YOUR STYLE, IN ONE PLACE</small><h1>My Wardrobe</h1><p>Return to the pieces and complete looks you love, then use them to shape what comes next.</p></section><div className="wardrobe-grid"><button onClick={() => navigate("wishlist")}><span>{wishlist.length}</span><strong>Saved pieces</strong><small>Your favourites and try-on starting points</small></button><button onClick={openSavedOutfits}><span>{savedOutfits.length}</span><strong>Saved looks</strong><small>Complete edits ready to revisit</small></button><button onClick={() => navigate("orders")}><span>{orders.length}</span><strong>Previous purchases</strong><small>Pieces from your StylishMe orders</small></button></div><section className="wardrobe-later"><small>DIGITAL WARDROBE</small><h2>Your own clothes, later</h2><p>Owned-item uploads and mix-and-match recommendations are planned after the core shopping and try-on experience is proven.</p></section></>;
   else if (view === "addresses") content = <>{header("Saved Addresses", addressesReturnView)}<div className="address-list">{addresses.map((address, index) => <div className="info-card" key={`${address.label}-${index}`}><strong>{address.label}{index === 0 ? " · Default" : ""}</strong><span>{address.street}</span><small>{address.city}</small><button aria-label={`Edit ${address.label}`} onClick={() => setAddressEditor({ ...address, index })}>Edit</button></div>)}</div><button className="gradient-button full" onClick={() => setAddressEditor({ index: null, label: "", street: "", city: profile.city })}>Add address</button></>
@@ -1058,7 +1096,7 @@ export default function StylishMeApp({
           <nav className="bottom-nav">
             {mainTabs.map(([label, target, icon]) => {
               const active = isMainTabActive(target);
-              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "try-on") : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
+              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "try-on") : ["wishlist", "profile"].includes(target) ? loginFor(`/?view=${target}`) || navigate(target) : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
             })}
           </nav>
         )}

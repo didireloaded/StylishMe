@@ -18,6 +18,40 @@ test("routes first-time accounts into isolated customer or seller experiences", 
   assert.match(entry, /stylishme-account-role/);
 });
 
+test("public visitors can browse the marketplace before login", async () => {
+  const [page, appEntry, app] = await Promise.all([
+    read("app/page.tsx"),
+    read("app/AppEntry.tsx"),
+    read("app/StylishMeApp.tsx"),
+  ]);
+
+  assert.doesNotMatch(page, /redirect\(`\/login/);
+  assert.match(page, /user \? \{ name: user\.displayName, email: user\.email, avatarUrl: user\.avatarUrl \} : null/);
+  assert.match(appEntry, /user: User \| null/);
+  assert.match(appEntry, /useState<AccountRole \| null>\(\(\) => user \? null : "customer"\)/);
+  assert.match(app, /stylishme-state:\$\{user\?\.email \?\? "signed-out"\}/);
+  assert.match(app, /if \(!user\) return;/);
+  assert.match(app, /loginFor\(`\/\?view=product&product=\$\{product\.id\}`\)/);
+});
+
+test("guest browsing remains visible while shopping actions require login", async () => {
+  const { default: StylishMeApp } = await import("../app/StylishMeApp.tsx");
+  const app = await read("app/StylishMeApp.tsx");
+  localStorage.clear();
+  globalThis.fetch = async (url) => ({
+    ok: String(url).includes("/api/catalog") || String(url).includes("/api/customer-stories") || String(url).includes("/api/discovery"),
+    status: String(url).includes("/api/state") ? 401 : 200,
+    json: async () => String(url).includes("/api/catalog") ? { products: [] } : String(url).includes("/api/customer-stories") ? { stories: [], eligibleItems: [] } : {},
+  });
+
+  render(React.createElement(StylishMeApp, { user: null }));
+  assert.ok(await screen.findByRole("heading", { name: "STYLISHME" }));
+  assert.match(app, /window\.location\.href = `\/login\?returnTo=\$\{encodeURIComponent\(returnTo\)\}`/);
+  assert.match(app, /if \(loginFor\(window\.location\.pathname \+ window\.location\.search\)\) return;/);
+  assert.match(app, /if \(loginFor\(`\/\?view=product&product=\$\{product\.id\}`\)\) return;/);
+  cleanup();
+});
+
 test("keeps store links inside the unified app and scoped to one storefront", async () => {
   const [domain, storefront] = await Promise.all([
     import("../app/unified-domain.ts"),

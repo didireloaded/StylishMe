@@ -21,7 +21,7 @@ function installState(state = null) {
 
 async function renderApp(state = null) {
   installState(state);
-  render(React.createElement(StylishMeApp, { user: null }));
+  render(React.createElement(StylishMeApp, { user: { name: "Test Customer", email: "customer@test.dev", avatarUrl: "" } }));
   await screen.findByRole("navigation");
 }
 
@@ -370,7 +370,18 @@ test("An all-unavailable story offers View Similar and routes to the outfit", as
 });
 
 test("order status filters show only the matching orders", async () => {
-  await renderApp();
+  await renderApp({
+    cart: [],
+    wishlist: [],
+    orders: [
+      { id: "SM-2026-1048", date: "12 Jul 2026", status: "In transit", total: 2098, fulfilment: "Standard delivery", items: [{ productId: "p1", size: "M", color: "#f3a4b8", quantity: 1 }] },
+      { id: "SM-2026-1017", date: "30 Jun 2026", status: "Delivered", total: 2450, fulfilment: "Express delivery", items: [{ productId: "p3", size: "M", color: "#988ee8", quantity: 1 }] },
+      { id: "SM-2026-0982", date: "18 Jun 2026", status: "Delivered", total: 1190, fulfilment: "Standard delivery", items: [{ productId: "p9", size: "One size", color: "#e9d6bd", quantity: 1 }] },
+      { id: "SM-2026-0931", date: "02 Jun 2026", status: "Cancelled", total: 749, fulfilment: "Standard delivery", items: [{ productId: "p6", size: "L", color: "#83afd9", quantity: 1 }] },
+    ],
+    savedOutfits: [],
+    profile: { city: "Windhoek", size: "M", shoe: "39", fit: "Regular" },
+  });
   openMainTab("Profile");
   fireEvent.click(screen.getByRole("button", { name: /^My orders/ }));
 
@@ -422,7 +433,14 @@ test("designer following and support topics change the visible experience", asyn
 });
 
 test("saved addresses can be added and edited", async () => {
-  await renderApp();
+  await renderApp({
+    cart: [],
+    wishlist: [],
+    orders: [],
+    savedOutfits: [],
+    addresses: [],
+    profile: { city: "Windhoek", size: "M", shoe: "39", fit: "Regular" },
+  });
   openMainTab("Profile");
   fireEvent.click(screen.getByRole("button", { name: /^Saved addresses/ }));
   fireEvent.click(screen.getByRole("button", { name: "Add address" }));
@@ -432,7 +450,7 @@ test("saved addresses can be added and edited", async () => {
   fireEvent.change(within(dialog).getByLabelText("Street address"), { target: { value: "42 Fidel Castro Street" } });
   fireEvent.change(within(dialog).getByLabelText("Town or city"), { target: { value: "Windhoek" } });
   fireEvent.click(within(dialog).getByRole("button", { name: "Save address" }));
-  assert.ok(screen.getByText("Office"));
+  assert.ok(screen.getByText(/^Office/));
   assert.ok(screen.getByText("42 Fidel Castro Street"));
 
   fireEvent.click(screen.getByRole("button", { name: "Edit Office" }));

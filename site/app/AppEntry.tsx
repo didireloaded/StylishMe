@@ -7,15 +7,15 @@ import StorefrontView from "./StorefrontView";
 import StylishMeApp from "./StylishMeApp";
 import type { AccountRole } from "./unified-domain";
 
-type User = { name: string; email: string; avatarUrl: string };
+type User = { name: string; email: string; avatarUrl?: string | null };
 type EntryStage = "welcome" | "highlights" | "role";
 
-export default function AppEntry({ user }: { user: User }) {
+export default function AppEntry({ user }: { user: User | null }) {
   const [stage, setStage] = useState<EntryStage>("welcome");
-  const [role, setRole] = useState<AccountRole | null>(null);
+  const [role, setRole] = useState<AccountRole | null>(() => user ? null : "customer");
   const [storeSlug, setStoreSlug] = useState(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("store") ?? "");
-  const [checkingRole, setCheckingRole] = useState(true);
-  const roleKey = useMemo(() => `stylishme-account-role:${user.email}`, [user.email]);
+  const [checkingRole, setCheckingRole] = useState(() => Boolean(user));
+  const roleKey = useMemo(() => `stylishme-account-role:${user?.email ?? "signed-out"}`, [user?.email]);
   const joinIntent = useMemo<AccountRole | null>(() => {
     if (typeof window === "undefined") return null;
     const value = new URLSearchParams(window.location.search).get("join");
@@ -50,6 +50,7 @@ export default function AppEntry({ user }: { user: User }) {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     const saved = localStorage.getItem(roleKey);
     fetch("/api/account")
       .then((response) => response.ok ? response.json() : Promise.reject())
@@ -79,9 +80,13 @@ export default function AppEntry({ user }: { user: User }) {
         if (saved === "customer" || saved === "seller") setRole(saved);
       })
       .finally(() => setCheckingRole(false));
-  }, [joinIntent, roleKey, user.email]);
+  }, [joinIntent, roleKey, user]);
 
   const chooseRole = async (next: AccountRole) => {
+    if (!user) {
+      window.location.href = `/login?returnTo=${encodeURIComponent(`/?join=${next}`)}`;
+      return;
+    }
     track("role_selected", "role", next);
     const response = await fetch("/api/account", {
       method: "POST",
@@ -105,7 +110,7 @@ export default function AppEntry({ user }: { user: User }) {
 
   if (checkingRole) return <main className="entry-stage"><section className="entry-shell entry-loading"><header><strong>STYLISHME</strong><span>Namibian fashion, personally yours.</span></header><div><small>WELCOME BACK</small><h1>Preparing your StylishMe.</h1></div></section></main>;
 
-  if (role === "seller") return <SellerApp user={user} />;
+  if (role === "seller" && user) return <SellerApp user={user} />;
   if (role === "customer") return <StylishMeApp user={user} />;
 
   return <main className="entry-stage">
