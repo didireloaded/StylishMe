@@ -24,6 +24,16 @@ import type { EligibleStoryItem, PublicCustomerStory } from "./customer-story-do
 import { mergeGuestShoppingState } from "./guest-state";
 
 type View = "home" | "shop" | "stores" | "search" | "seller-directory" | "product" | "designer" | "outfits" | "try-on" | "wishlist" | "wardrobe" | "cart" | "checkout" | "confirmation" | "orders" | "tracking" | "profile" | "addresses" | "notifications" | "support" | "settings";
+
+const customerDeepLinkViews = new Set<View>([
+  "home", "shop", "stores", "search", "seller-directory", "outfits", "try-on",
+  "wishlist", "wardrobe", "cart", "orders", "tracking", "profile", "addresses",
+  "notifications", "support", "settings",
+]);
+
+function customerViewFromSearch(value: string | null): View | null {
+  return value && customerDeepLinkViews.has(value as View) ? value as View : null;
+}
 type FulfilmentMethod = "Standard delivery" | "Express delivery" | "Store collection";
 type OrderFulfilment = {
   id: string; orderId: string; storeName: string; status: string; statusLabel: string; fulfilmentMethod: "delivery" | "collection";
@@ -184,10 +194,10 @@ function Icon({ name }: { name: string }) {
   return <svg {...common}><path d="M4 4h16v16H4z" /></svg>;
 }
 
-function ProductCard({ product, open, saved, toggle }: { product: Product; open: () => void; saved: boolean; toggle: () => void }) {
+function ProductCard({ product, open, saved, toggle, add }: { product: Product; open: () => void; saved: boolean; toggle: () => void; add?: () => void }) {
   return <article className="product-card">
     <button className="product-image" onClick={open} aria-label={`Open ${product.name}`}><img src={product.image} alt={product.name} />{product.badge && <span className="badge">{product.badge}</span>}</button>
-    <button className={`heart ${saved ? "saved" : ""}`} onClick={toggle} aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}>{saved ? "♥" : "♡"}</button>
+    <div className="product-card-actions">{add && <button className="product-add" onClick={add} aria-label={`Add ${product.name} to bag`}>+</button>}<button className={`heart ${saved ? "saved" : ""}`} onClick={toggle} aria-label={saved ? "Remove from wishlist" : "Save to wishlist"}>{saved ? "♥" : "♡"}</button></div>
     <button className="product-copy" onClick={open}><small>{product.designer}</small><strong>{product.name}</strong><span>{money(product.price)} {product.oldPrice && <s>{money(product.oldPrice)}</s>}</span></button>
   </article>;
 }
@@ -201,11 +211,7 @@ export default function StylishMeApp({
 }) {
   const [catalogueProducts, setCatalogueProducts] = useState<Product[]>(seededProducts);
   const products = catalogueProducts;
-  const [view, setView] = useState<View>(() => {
-    if (typeof window === "undefined") return "home";
-    const requested = new URLSearchParams(window.location.search).get("view");
-    return requested === "profile" || requested === "orders" ? requested : "home";
-  });
+  const [view, setView] = useState<View>("home");
   const [selectedId, setSelectedId] = useState("p1");
   const [productReturnView, setProductReturnView] = useState<View>("shop");
   const [wishlist, setWishlist] = useState<string[]>(user ? [] : ["p2", "p4", "p7", "p9", "p11", "p14"]);
@@ -459,6 +465,12 @@ export default function StylishMeApp({
     const orderId = params.get("order");
     if (orderId && /^[A-Z0-9-]{8,80}$/i.test(orderId)) setSelectedOrderId(orderId);
     window.history.replaceState(null, "", "/?view=orders");
+  }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") || params.get("product")) return;
+    const requested = customerViewFromSearch(params.get("view"));
+    if (requested) setView(requested);
   }, []);
   useEffect(() => { void refreshCustomerStories(); }, []);
   useEffect(() => { void fetch("/api/discovery").then(response => response.ok ? response.json() : null).then(body => { setTrendingProductIds(Array.isArray(body?.trendingProductIds) ? body.trendingProductIds : []); setNewProductIds(Array.isArray(body?.newProductIds) ? body.newProductIds : []); setFeaturedDesigner(typeof body?.featuredDesigner === "string" ? body.featuredDesigner : ""); }).catch(() => undefined); }, []);
@@ -794,12 +806,17 @@ export default function StylishMeApp({
     setStoryComposerOpen(true);
   };
   const header = (title: string, back?: View) => <header className="page-header"><button onClick={() => navigate(back ?? "home")} className="circle-btn" aria-label="Go back">‹</button><strong>{title}</strong>{!["My Cart", "Checkout"].includes(title) && cartButton()}</header>;
-  const grid = (list: Product[]) => <div className="product-grid">{list.map(product => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}</div>;
+  const grid = (list: Product[]) => <div className="product-grid">{list.map(product => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} add={() => quickAddWishlistItem(product)} />)}</div>;
 
   let content: React.ReactNode;
   if (view === "home") content = <>
     <header className="brand-header"><h1>STYLISHME</h1><div><button onClick={openStoryComposer} className="circle-btn post-outfit-button" aria-label="Post an outfit"><Icon name="plus" /></button><button onClick={() => navigate("search")} className="circle-btn" aria-label="Search"><Icon name="search" /></button><button onClick={() => navigate("notifications")} className="circle-btn" aria-label="Notifications"><Icon name="bell" /></button>{cartButton()}</div></header>
     <button className="home-search" onClick={() => navigate("search")}><Icon name="search" /><span>Search products, stores and designers</span></button>
+    <section className="editorial-hero" aria-labelledby="home-editorial-title">
+      <small>STYLISHME NAMIBIA</small>
+      <h2 id="home-editorial-title">Find the look.<span>Wear the moment.</span></h2>
+      <p>Local designers, complete outfits and pieces you can try before choosing your size.</p>
+    </section>
     <section className="story-row outfit-story-row" aria-label="Outfit stories">
       {user && eligibleStoryItems.length > 0 && <article className="story-identity customer-story-identity">
         <button className="story-trigger customer-story-add" onClick={() => setStoryComposerOpen(true)}>
@@ -841,9 +858,7 @@ export default function StylishMeApp({
     </section>
     <section aria-labelledby="new-arrivals-title">
       <div className="section-title"><h2 id="new-arrivals-title">New arrivals</h2><button onClick={() => navigate("shop")}>View all</button></div>
-      <div className="compact-product-row">
-        {newArrivalProducts.map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}
-      </div>
+      {grid(newArrivalProducts)}
     </section>
     <section className="home-look-edit home-look-strip" aria-labelledby="shop-look-title">
       <div className="section-title"><h2 id="shop-look-title">Shop the Look</h2><button onClick={() => openOutfit(OUTFITS[0].id)}>View looks</button></div>
@@ -865,7 +880,7 @@ export default function StylishMeApp({
     <section aria-labelledby="trending-title">
       <div className="section-title"><h2 id="trending-title">Trending products</h2><button onClick={() => navigate("shop")}>View all</button></div>
       <div className="compact-product-row">
-        {trendingProducts.map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}
+        {trendingProducts.map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} add={() => quickAddWishlistItem(product)} />)}
       </div>
     </section>
     <section className="home-designers" aria-labelledby="home-designers-title">
@@ -1034,7 +1049,7 @@ export default function StylishMeApp({
     </>;
   }  else if (view === "profile") {
     const profileCollections: Array<[string, View]> = [["Style Me", "try-on"], ["My wardrobe", "wardrobe"], ["Wishlist", "wishlist"], ["Saved outfits", "outfits"]];
-    content = <>{header("Profile")}<section className="profile-head"><div className="avatar profile-photo">{user?.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name}'s profile`} /> : "S"}</div><h1>{user?.name ?? "StylishMe preview"}</h1><p>{profile.city}, Namibia</p><div><strong>{orders.length}<small>Orders</small></strong><strong>{wishlist.length}<small>Wishlist</small></strong><strong>{profile.size}<small>Fit size</small></strong></div>{user ? <LogoutButton email={user.email} /> : null}</section><div className="profile-menu profile-collections">{profileCollections.map(([label, target]) => <button key={label} onClick={() => target === "outfits" ? openSavedOutfits() : target === "try-on" ? startTryOn([selected.id], "style") : navigate(target)}><span>{label}</span><small>{label === "Wishlist" ? wishlist.length : label === "Saved outfits" ? savedOutfits.length : label === "Style Me" ? "Your personal edit" : "Your edit"}</small><b>›</b></button>)}</div><div className="profile-menu">{[["My orders", "orders"], ["Saved addresses", "addresses"], ["Fit Passport", "settings"], ["Notifications", "notifications"], ["Help & support", "support"], ["Settings", "settings"]].map(([label, target]) => <button key={label} onClick={() => { if (target === "addresses") setAddressesReturnView("profile"); navigate(target as View); }}><span>{label}</span><b>›</b></button>)}</div></>;
+    content = <>{header("Profile")}<section className="profile-head"><div className="avatar profile-photo">{user?.avatarUrl ? <img src={user.avatarUrl} alt={`${user.name}'s profile`} /> : "S"}</div><h1>{user?.name ?? "StylishMe preview"}</h1><p>{profile.city}, Namibia</p><div className="profile-stats-bar"><strong>{orders.length}<small>Orders</small></strong><strong>{wishlist.length}<small>Saved</small></strong><strong>{profile.size}<small>Fit size</small></strong><strong>{followedDesigners.length}<small>Following</small></strong></div>{user ? <LogoutButton email={user.email} /> : <button className="gradient-button full" onClick={() => { window.location.href = "/login?returnTo=/"; }}>Sign in to StylishMe</button>}</section><div className="profile-menu profile-collections">{profileCollections.map(([label, target]) => <button key={label} onClick={() => target === "outfits" ? openSavedOutfits() : target === "try-on" ? startTryOn([selected.id], "style") : navigate(target)}><span>{label}</span><small>{label === "Wishlist" ? wishlist.length : label === "Saved outfits" ? savedOutfits.length : label === "Style Me" ? "Your personal edit" : "Your edit"}</small><b>›</b></button>)}</div><div className="profile-menu">{[["My orders", "orders"], ["Saved addresses", "addresses"], ["Fit Passport", "settings"], ["Notifications", "notifications"], ["Help & support", "support"], ["Settings", "settings"]].map(([label, target]) => <button key={label} onClick={() => { if (target === "addresses") setAddressesReturnView("profile"); navigate(target as View); }}><span>{label}</span><b>›</b></button>)}</div></>;
   }
   else if (view === "wardrobe") content = <>{header("My Wardrobe", "profile")}<section className="wardrobe-intro"><small>YOUR STYLE, IN ONE PLACE</small><h1>My Wardrobe</h1><p>Return to the pieces and complete looks you love, then use them to shape what comes next.</p></section><div className="wardrobe-grid"><button onClick={() => navigate("wishlist")}><span>{wishlist.length}</span><strong>Saved pieces</strong><small>Your favourites and try-on starting points</small></button><button onClick={openSavedOutfits}><span>{savedOutfits.length}</span><strong>Saved looks</strong><small>Complete edits ready to revisit</small></button><button onClick={() => navigate("orders")}><span>{orders.length}</span><strong>Previous purchases</strong><small>Pieces from your StylishMe orders</small></button></div><section className="wardrobe-later"><small>DIGITAL WARDROBE</small><h2>Your own clothes, later</h2><p>Owned-item uploads and mix-and-match recommendations are planned after the core shopping and try-on experience is proven.</p></section></>;
   else if (view === "addresses") content = <>{header("Saved Addresses", addressesReturnView)}<div className="address-list">{addresses.map((address, index) => <div className="info-card" key={`${address.label}-${index}`}><strong>{address.label}{index === 0 ? " · Default" : ""}</strong><span>{address.street}</span><small>{address.city}</small><button aria-label={`Edit ${address.label}`} onClick={() => setAddressEditor({ ...address, index })}>Edit</button></div>)}</div><button className="gradient-button full" onClick={() => setAddressEditor({ index: null, label: "", street: "", city: profile.city })}>Add address</button></>
