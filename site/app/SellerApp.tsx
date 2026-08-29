@@ -69,9 +69,23 @@ function Icon({ name }: { name: string }) {
     orders: "M5 3h14v18H5zM8 8h8M8 12h8M8 16h5",
     store: "M4 9h16l-1 12H5L4 9ZM7 9l1-5h8l1 5",
     share: "M12 16V3m0 0L7 8m5-5 5 5M5 12v9h14v-9",
+    search: "m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z",
+    menu: "M4 7h16M4 12h16M4 17h16",
+    close: "M6 6l12 12M18 6 6 18",
+    analytics: "M4 19V5M8 17v-6M12 17V8M16 17v-9M20 17v-3",
+    payouts: "M4 7h16M6 7v10h12V7M8 12h8M10 16h4",
+    settings: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .34 1.88l.05.05a2 2 0 1 1-2.83 2.83l-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6l-.04.06a2 2 0 1 1-3.92 0L10 20a1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.05.05a2 2 0 1 1-2.83-2.83l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1l-.06-.04a2 2 0 1 1 0-3.92L4 10a1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.05-.05a2 2 0 1 1 2.83-2.83l.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6l.04-.06a2 2 0 1 1 3.92 0L14 4a1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.05-.05a2 2 0 1 1 2.83 2.83l-.05.05A1.7 1.7 0 0 0 19.4 9c.18.37.39.68.6 1l.06.04a2 2 0 1 1 0 3.92L20 14a1.7 1.7 0 0 0-.6 1Z",
   };
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d={path[name]} /></svg>;
 }
+
+const navSections: Array<{ label: string; items: Array<[string, View, string]> }> = [
+  { label: "Overview", items: [["Overview", "today", "home"]] },
+  { label: "Selling", items: [["Orders", "orders", "orders"], ["Products", "collection", "collection"], ["Inventory", "inventory", "plus"], ["Collections", "collections", "collection"]] },
+  { label: "Customers", items: [["Reviews", "questions", "store"], ["Customers", "customers", "store"]] },
+  { label: "Performance", items: [["Analytics", "analytics", "analytics"], ["Payouts", "payouts", "payouts"]] },
+  { label: "Store", items: [["Store Profile", "store", "store"], ["Notifications", "notifications", "orders"], ["Settings", "settings", "settings"]] },
+];
 
 export default function SellerApp({
   user = { name: "Maria", email: "preview@stylishme.na" },
@@ -94,6 +108,8 @@ export default function SellerApp({
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>("Needs action");
   const [courierDrafts, setCourierDrafts] = useState<Record<string, { provider: string; trackingNumber: string }>>({});
   const [busyOrderId, setBusyOrderId] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
+  const [sellerSearch, setSellerSearch] = useState("");
   const [newStore, setNewStore] = useState({ name: "", type: "Designer", owner: user.name, city: "Windhoek", email: user.email, phone: "" });
 
   useEffect(() => {
@@ -166,7 +182,7 @@ export default function SellerApp({
   const visibleProducts = filterSellerProducts(state.products, productFilter);
   const ready = productReadiness(draft);
   const visibleSellerOrders = sellerOrders.filter(order => orderMatchesFilter(order, sellerOrderFilter));
-  const go = (next: View) => { setView(next); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const go = (next: View) => { setView(next); setNavOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const copy = async (value: string, message: string) => { try { await navigator.clipboard.writeText(value); } catch {} setToast(message); };
   const advanceOrder = async (order: SellerOrder) => {
     const status = nextSellerStatus(order);
@@ -225,7 +241,25 @@ export default function SellerApp({
     void save({ ...state, products: draft.id ? state.products.map(p => p.id === draft.id ? next : p) : [next, ...state.products] });
     setDraft(blank()); setStep(0); go("collection"); setToast("Quality checks passed — your piece is live");
   };
-  const header = (title?: string) => <header className="seller-header"><button className="wordmark" onClick={() => go("today")}><span>STYLISHME</span><small>SELLER</small></button>{title && <strong>{title}</strong>}<button className="store-pill" onClick={() => go("store")}>Store</button></header>;
+  const header = (title?: string) => <header className="seller-header">
+    <button className="seller-menu-button" aria-label="Open seller navigation" onClick={() => setNavOpen(true)}><Icon name="menu" /></button>
+    {title && <strong>{title}</strong>}
+    <label className="seller-search"><Icon name="search" /><input value={sellerSearch} onChange={event => setSellerSearch(event.target.value)} placeholder="Search orders, products, customers" /></label>
+    <button className="store-pill" onClick={() => go("store")}>View store</button>
+    <button className="primary seller-header-action" onClick={() => go("add")}>Add product</button>
+  </header>;
+  const nav = <aside className="seller-sidebar" aria-label="Seller navigation">
+    <div className="seller-sidebar-brand">
+      <button className="wordmark" onClick={() => go("today")}><span>STYLISHME</span><small>SELLER</small></button>
+      <button className="seller-close-button" aria-label="Close seller navigation" onClick={() => setNavOpen(false)}><Icon name="close" /></button>
+    </div>
+    <nav>
+      {navSections.map(section => <section key={section.label}>
+        <small>{section.label}</small>
+        {section.items.map(([label, target, icon]) => <button key={target} className={view === target ? "active" : ""} aria-current={view === target ? "page" : undefined} onClick={() => go(target)}><Icon name={icon} /><span>{label}</span></button>)}
+      </section>)}
+    </nav>
+  </aside>;
 
   let content;
   if (view === "today") content = <>
@@ -320,6 +354,5 @@ export default function SellerApp({
     {header("Your store")}<section className="store-cover"><img src={images[2]} alt="" /><span>MADE IN<br />NAMIBIA</span></section><section className="store-profile"><small>{state.store.type.toUpperCase()}</small><h1>{state.store.name}</h1><p>{state.store.city}, Namibia · {state.store.approved ? "Store open" : "Finish setup"}</p><div><strong>{live.length}<small>Published</small></strong><strong>{pieces}<small>Available units</small></strong><strong>{low.length}<small>Low stock</small></strong></div></section><section className="form-card"><h2>Your story</h2><textarea value={state.store.story} onChange={e => setState(current => ({ ...current, store: { ...current.store, story: e.target.value } }))} /><button className="primary" onClick={() => { save(state); setToast("Store story saved"); }}>Save changes</button></section><section className="share-card"><div><small>CUSTOMER LINK</small><h2>Share your store</h2><p>{storeShareUrl(state.store.name)}</p></div><button onClick={() => copy(storeShareUrl(state.store.name), "Store link copied")}><Icon name="share" /> Copy link</button></section>
   </>;
 
-  const tabs: Array<[string, View, string]> = [["Home", "today", "home"], ["Orders", "orders", "orders"], ["Products", "collection", "collection"], ["Inventory", "inventory", "plus"], ["More", "more", "store"]];
-  return <main className="seller-stage"><div className="seller-app"><div className="seller-content">{content}</div><nav className="seller-bottom-nav">{tabs.map(([label, target, icon]) => <button key={target} className={view === target ? "active" : ""} aria-current={view === target ? "page" : undefined} onClick={() => go(target)}><Icon name={icon} /><span>{label}</span></button>)}</nav>{toast && <div className="seller-toast" role="status">{toast}</div>}</div></main>;
+  return <main className="seller-stage"><div className={`seller-app ${navOpen ? "nav-open" : ""}`}>{nav}<div className="seller-nav-scrim" onClick={() => setNavOpen(false)} /><div className="seller-content">{content}</div>{toast && <div className="seller-toast" role="status">{toast}</div>}</div></main>;
 }

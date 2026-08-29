@@ -91,13 +91,16 @@ test("seller home remains useful and safe while a new store has no products yet"
 
 test("seller workspace exposes phase-one operations without invented finance data", async () => {
   const seller = await read("app/SellerApp.tsx");
-  for (const area of ["Home", "Orders", "Products", "Inventory", "Payouts", "Collections", "Customers", "Reviews & Questions", "Analytics", "Notifications", "Settings"]) {
+  for (const area of ["Overview", "Orders", "Products", "Inventory", "Payouts", "Collections", "Customers", "Reviews & Questions", "Analytics", "Notifications", "Settings"]) {
     assert.match(seller, new RegExp(area));
   }
+  assert.match(seller, /seller-sidebar/);
   assert.match(seller, /Stock by variant/);
   assert.match(seller, /verified customer payments/);
   assert.match(seller, /\/api\/seller-settlements/);
   assert.match(seller, /Every adjustment needs a reason/);
+  assert.doesNotMatch(seller, /seller-bottom-nav/);
+  assert.doesNotMatch(seller, /editorial-hero/);
   assert.doesNotMatch(seller, /N\$12,640/);
   assert.doesNotMatch(seller, /1,482/);
 });
