@@ -18,6 +18,7 @@ type Props = {
   selectedId: string;
   products: OutfitProduct[];
   savedOutfitIds: string[];
+  focused?: boolean;
   replacements: Record<string, string>;
   onSelect: (id: string) => void;
   onSave: (id: string) => void;
@@ -34,6 +35,7 @@ export default function OutfitsView({
   selectedId,
   products,
   savedOutfitIds,
+  focused = false,
   replacements,
   onSelect,
   onSave,
@@ -61,7 +63,7 @@ export default function OutfitsView({
     <section className="outfit-view" aria-labelledby="outfit-title">
       <div className="outfit-view-heading">
         <small>CURATED FOR NAMIBIA</small>
-        <h1>Outfits</h1>
+        <h1>{focused ? "Outfit of the day" : "Outfits"}</h1>
       </div>
 
       <div className="outfit-stage">
@@ -74,19 +76,21 @@ export default function OutfitsView({
         </div>
       </div>
 
-      <div className="outfit-selector" aria-label="Choose a curated outfit">
-        {outfits.map((outfit) => (
-          <button
-            key={outfit.id}
-            className={outfit.id === selected.id ? "active" : ""}
-            aria-pressed={outfit.id === selected.id}
-            onClick={() => onSelect(outfit.id)}
-          >
-            <img src={outfit.image} alt="" />
-            <span>{outfit.title}</span>
-          </button>
-        ))}
-      </div>
+      {!focused && (
+        <div className="outfit-selector" aria-label="Choose a curated outfit">
+          {outfits.map((outfit) => (
+            <button
+              key={outfit.id}
+              className={outfit.id === selected.id ? "active" : ""}
+              aria-pressed={outfit.id === selected.id}
+              onClick={() => onSelect(outfit.id)}
+            >
+              <img src={outfit.image} alt="" />
+              <span>{outfit.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="outfit-total">
         <span>Combined total · {items.length} pieces</span>

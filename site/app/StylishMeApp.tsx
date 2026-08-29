@@ -250,6 +250,7 @@ export default function StylishMeApp({
   const [pendingOutfitAdd, setPendingOutfitAdd] = useState<PendingOutfitAdd | null>(null);
   const [outfitSizeSelections, setOutfitSizeSelections] = useState<Record<string, string>>({});
   const [savedOutfitMode, setSavedOutfitMode] = useState(false);
+  const [focusedOutfitId, setFocusedOutfitId] = useState<string | null>(null);
   const [tryOnProductIds, setTryOnProductIds] = useState<string[]>(["p1"]);
   const [tryOnIntent, setTryOnIntent] = useState<"style" | "try-on">("try-on");
   const [outfitReplacements, setOutfitReplacements] = useState<Record<string, Record<string, string>>>({});
@@ -478,8 +479,9 @@ export default function StylishMeApp({
     setSelectedProductImage(p.image);
     navigate("product");
   };
-  const openOutfit = (id: string) => { trackActivity("outfit_viewed", "outfit", id); setSavedOutfitMode(false); setSelectedOutfitId(id); setActiveStoryId(null); navigate("outfits"); };
+  const openOutfit = (id: string, focused = false) => { trackActivity("outfit_viewed", "outfit", id); setSavedOutfitMode(false); setFocusedOutfitId(focused ? id : null); setSelectedOutfitId(id); setActiveStoryId(null); navigate("outfits"); };
   const openSavedOutfits = () => {
+    setFocusedOutfitId(null);
     setSavedOutfitMode(true);
     if (savedOutfits.length) setSelectedOutfitId(savedOutfits[0]);
     navigate("outfits");
@@ -789,14 +791,14 @@ export default function StylishMeApp({
       })}
     </section>
     {customerStoriesError && <p className="customer-stories-note">Outfit stories are resting. Our daily edits are still here.</p>}
-    <section className="hero-card ootd-hero">
+    <section className="hero-card ootd-hero" aria-labelledby="outfit-day-title">
       <img src={OUTFITS[0].image} alt={OUTFITS[0].title} />
       <div>
         <small>Outfit of the day</small>
-        <h2>{OUTFITS[0].title}</h2>
+        <h2 id="outfit-day-title">{OUTFITS[0].title}</h2>
         <p>{OUTFITS[0].note}</p>
         <strong>{money(getOutfitTotal(OUTFITS[0], priceById))}</strong>
-        <button onClick={() => openOutfit(OUTFITS[0].id)} className="soft-button">Explore the edit</button>
+        <button onClick={() => openOutfit(OUTFITS[0].id, true)} className="soft-button">See the outfit</button>
       </div>
     </section>
     <section aria-labelledby="new-arrivals-title">
@@ -805,12 +807,18 @@ export default function StylishMeApp({
         {newArrivalProducts.map((product) => <ProductCard key={product.id} product={product} open={() => openProduct(product.id)} saved={wishlist.includes(product.id)} toggle={() => toggleWishlist(product.id)} />)}
       </div>
     </section>
-    <section className="home-look-edit" aria-labelledby="shop-look-title">
+    <section className="home-look-edit home-look-strip" aria-labelledby="shop-look-title">
       <div className="section-title"><h2 id="shop-look-title">Shop the Look</h2><button onClick={() => openOutfit(OUTFITS[0].id)}>View looks</button></div>
-      <button className="look-card home-look-card" onClick={() => openOutfit(OUTFITS[1].id)}>
-        <img src={OUTFITS[1].image} alt={OUTFITS[1].title} />
-        <div><small>{OUTFITS[1].location}</small><h2>{OUTFITS[1].title}</h2><p>{OUTFITS[1].note}</p><strong>{money(getOutfitTotal(OUTFITS[1], priceById))}</strong></div>
-      </button>
+      <div className="home-look-rail">
+        {OUTFITS.slice(1).map(outfit => {
+          const lookProducts = outfit.productIds.flatMap(id => products.find(product => product.id === id) ?? []);
+          return <button className="home-look-tile" key={outfit.id} onClick={() => openOutfit(outfit.id)}>
+            <img src={outfit.image} alt="" />
+            <span><small>{outfit.location}</small><strong>{outfit.title}</strong><b>{outfit.productIds.length} pieces · {money(getOutfitTotal(outfit, priceById))}</b></span>
+            <i>{lookProducts.slice(0, 3).map(product => <img key={product.id} src={product.image} alt="" />)}</i>
+          </button>;
+        })}
+      </div>
     </section>
     <section className="made-local-edit" aria-labelledby="made-local-title">
       <img src={products[4].image} alt="Made in Namibia collection" />
@@ -877,7 +885,7 @@ export default function StylishMeApp({
       <button className="clear-filters" onClick={resetShopFilters}>Clear all</button>
     </div>}
     <div className="result-line"><span><b>{filtered.length} {filtered.length === 1 ? "piece" : "pieces"}</b>{shopFilters.location !== DEFAULT_SHOP_FILTERS.location ? ` · ${shopFilters.location}` : ""}</span><button onClick={() => setFiltersOpen(true)}>Sort &amp; filter · {sort}</button></div>
-    {filtered.length ? grid(filtered) : <div className="empty"><h2>No pieces found</h2><p>Try a broader search or clear your filters.</p><button onClick={clearShopDiscovery} className="gradient-button">Clear all filters</button></div>}
+    {filtered.length ? grid(filtered) : <div className="empty"><h2>0 pieces found</h2><p>Try a broader search or clear your filters.</p><button onClick={clearShopDiscovery} className="gradient-button">Clear all filters</button></div>}
   </>;
   else if (view === "stores") {
     const visibleStores = seededDesignerNames.filter((name) =>
@@ -997,16 +1005,19 @@ export default function StylishMeApp({
   else content = <>{header("Settings", "profile")}<section className="settings-card"><h2>Fit Passport</h2>{[["Normal clothing size", "size"], ["Shoe size", "shoe"], ["Preferred fit", "fit"]].map(([label, key]) => <label key={key}><span>{label}</span><input value={profile[key as keyof typeof profile]} onChange={e => setProfile(p => ({ ...p, [key]: e.target.value }))} /></label>)}<p>Recommendations are suggestions, not a fit guarantee.</p></section><AccountConnections /><AccountDeletionControl /><section className="settings-card"><label className="switch-row"><span><strong>Data-light mode</strong><small>Reduce imagery and motion</small></span><input type="checkbox" checked={dataLight} onChange={e => setDataLight(e.target.checked)} /></label><label className="switch-row"><span><strong>Order notifications</strong><small>Delivery and collection updates</small></span><input type="checkbox" defaultChecked /></label></section></>;
 
   if (view === "outfits") {
-    const outfitCatalogue = savedOutfitMode
+    const outfitCatalogue = focusedOutfitId
+      ? OUTFITS.filter((outfit) => outfit.id === focusedOutfitId)
+      : savedOutfitMode
       ? OUTFITS.filter((outfit) => savedOutfits.includes(outfit.id))
       : OUTFITS;
     content = savedOutfitMode && !outfitCatalogue.length
       ? <div className="empty saved-outfits-empty"><h2>No saved outfits yet</h2><p>Save a story or curated look and it will appear here.</p><button className="gradient-button" onClick={() => setSavedOutfitMode(false)}>Browse curated outfits</button></div>
-      : <>{header("Shop the Look", "home")}<OutfitsView
+      : <>{header(focusedOutfitId ? "Outfit of the day" : "Shop the Look", "home")}<OutfitsView
         outfits={outfitCatalogue}
         selectedId={selectedOutfitId}
         products={storyProducts}
         savedOutfitIds={savedOutfits}
+        focused={Boolean(focusedOutfitId)}
         replacements={outfitReplacements[selectedOutfitId] ?? {}}
         onSelect={setSelectedOutfitId}
         onSave={toggleSavedOutfit}

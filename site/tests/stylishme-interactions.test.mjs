@@ -86,7 +86,7 @@ test("Wishlist quick-add persists a variant offered by the selected product", as
 
 test("Outfit bulk-add requests missing Fit Passport sizes and caps merged stock", async () => {
   await renderApp();
-  fireEvent.click(screen.getByRole("button", { name: "Explore the edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "See the outfit" }));
   fireEvent.click(screen.getByRole("button", { name: "Add All to Cart" }));
 
   let sheet = await screen.findByRole("dialog", { name: "Choose outfit sizes" });
@@ -264,14 +264,24 @@ test("product and curated-look entry points start try-on with real catalogue pie
   assert.equal(within(screen.getByRole("navigation")).getByRole("button", { name: "Try On" }).getAttribute("aria-current"), "page");
 
   openMainTab("Home");
-  fireEvent.click(screen.getByRole("button", { name: "Explore the edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "See the outfit" }));
   fireEvent.click(screen.getByRole("button", { name: "Try On This Look" }));
   assert.ok(screen.getByRole("heading", { name: "Try On" }));
 });
 
+test("outfit of the day opens as a focused single-look experience", async () => {
+  await renderApp();
+  fireEvent.click(screen.getByRole("button", { name: "See the outfit" }));
+
+  assert.ok(screen.getByRole("heading", { name: "Outfit of the day" }));
+  assert.equal(screen.queryByLabelText("Choose a curated outfit"), null);
+  assert.equal(screen.queryByRole("button", { name: /Coastline Weekend/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /Gallery Opening/ }), null);
+});
+
 test("a curated look can replace one piece while keeping the rest", async () => {
   await renderApp();
-  fireEvent.click(screen.getByRole("button", { name: "Explore the edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "View looks" }));
 
   fireEvent.click(screen.getByRole("button", { name: "Replace Kalahari Street Sneaker" }));
   assert.ok(await screen.findByText("Replaced Kalahari Street Sneaker with Kalahari Street Sneaker 2"));

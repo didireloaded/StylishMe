@@ -77,6 +77,10 @@ export default function DemoExperience() {
     setStage("tour");
     window.scrollTo({ top: 0 });
   };
+  const openPreview = () => {
+    setStage("explore");
+    window.scrollTo({ top: 0 });
+  };
 
   if (stage === "explore" && role) {
     return (
@@ -141,9 +145,9 @@ export default function DemoExperience() {
             <div className="demo-actions">
               {slide > 0 && <button onClick={() => setSlide(value => value - 1)}>Back</button>}
               {!last && <button className="primary" onClick={() => setSlide(value => value + 1)}>Next</button>}
-              {last && <button className="primary" onClick={() => setStage("explore")}>Open the preview</button>}
+              {last && <button className="primary" onClick={openPreview}>Open the preview</button>}
             </div>
-            {!last ? <button className="demo-skip" onClick={() => setStage("explore")}>Skip to the demo</button> : <a className="demo-join" href={joinUrl(role)}>Ready? Sign up as {role === "seller" ? "a vendor" : "a customer"}</a>}
+            {!last ? <button className="demo-skip" onClick={openPreview}>Skip to the demo</button> : <a className="demo-join" href={joinUrl(role)}>Ready? Sign up as {role === "seller" ? "a vendor" : "a customer"}</a>}
           </div>
         </article>
       </section>
