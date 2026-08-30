@@ -7,10 +7,13 @@ type PublicProduct = {
   description?: unknown;
   category?: unknown;
   price?: unknown;
+  oldPrice?: unknown;
+  badge?: unknown;
   images?: unknown;
   material?: unknown;
   fit?: unknown;
   delivery?: unknown;
+  madeToOrder?: unknown;
   variants?: unknown;
   store?: unknown;
 };
@@ -45,6 +48,7 @@ export function toCustomerProduct(value: unknown): Product | null {
   const designer = text(store.name);
   const category = text(input.category);
   const price = Number(input.price);
+  const oldPrice = Number(input.oldPrice);
   const images = Array.isArray(input.images) ? input.images.filter((image): image is string => typeof image === "string" && image.length > 0) : [];
   if (!id || !name || !designer || !category || !Number.isFinite(price) || price <= 0 || !images.length) return null;
 
@@ -81,8 +85,9 @@ export function toCustomerProduct(value: unknown): Product | null {
     location: text(store.city) || "Namibia",
     category,
     price,
+    oldPrice: Number.isFinite(oldPrice) && oldPrice > price ? oldPrice : undefined,
     image: images[0],
-    badge: "New from a local store",
+    badge: ["New Arrival", "Limited Drop"].includes(text(input.badge)) ? text(input.badge) : "New from a local store",
     material: text(input.material) || "See product details",
     fit: text(input.fit) || "See fit guidance",
     description: text(input.description),
@@ -93,6 +98,7 @@ export function toCustomerProduct(value: unknown): Product | null {
     delivery: deliveryMethods.length ? deliveryMethods.join(" · ") : "Delivery options shown at checkout",
     pickup: deliveryMethods.some((method) => /collection|pickup/i.test(method)),
     madeLocal: sellerType === "Designer",
+    madeToOrder: input.madeToOrder === true,
     sellerType,
   };
 }

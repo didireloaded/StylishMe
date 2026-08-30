@@ -11,10 +11,13 @@ type SellerProduct = ProductDraft & {
   id: string;
   status?: string;
   collection?: string;
+  salePrice?: number;
+  badge?: string;
   material?: string;
   fit?: string;
   delivery?: string[];
   returns?: string;
+  madeToOrder?: boolean;
 };
 
 export type SellerCatalogueState = {
@@ -90,14 +93,20 @@ export function normalizeSellerCatalogue(
       ? `${baseSlug}-${stableSlugToken(sourceId)}`
       : baseSlug);
     const images = product.images.filter((image) => typeof image === "string" && image.startsWith("/api/seller-images/")).slice(0, 5);
+    const salePrice = Number(product.salePrice);
+    const hasSale = Number.isFinite(salePrice) && salePrice > 0 && salePrice < product.price;
+    const badge = product.badge === "New Arrival" || product.badge === "Limited Drop" ? product.badge : "";
     const metadataJson = JSON.stringify({
       images,
       colours: product.colours,
       collection: product.collection ?? "",
+      oldPrice: hasSale ? product.price : undefined,
+      badge,
       material: product.material ?? "",
       fit: product.fit ?? "",
       delivery: product.delivery ?? [],
       returns: product.returns ?? "",
+      madeToOrder: product.madeToOrder === true,
       store: {
         name: storeName,
         type: typeof state.store?.type === "string" ? state.store.type : "Seller",
@@ -113,7 +122,7 @@ export function normalizeSellerCatalogue(
       name: product.name.trim(),
       description: product.description.trim(),
       category: product.category.trim(),
-      priceCents: Math.round(product.price * 100),
+      priceCents: Math.round((hasSale ? salePrice : product.price) * 100),
       status: "published",
       imageUrl: images[0],
       metadataJson,

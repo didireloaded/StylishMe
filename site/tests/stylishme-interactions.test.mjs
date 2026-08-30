@@ -72,8 +72,9 @@ test("Wishlist quick-add persists a variant offered by the selected product", as
     profile: { city: "Windhoek", size: "M", shoe: "39", fit: "Regular" },
   });
 
-  await waitFor(() => assert.ok(screen.getByRole("button", { name: /Wishlist$/ })));
-  openMainTab("Wishlist");
+  await waitFor(() => assert.ok(screen.getByRole("button", { name: "Profile" })));
+  openMainTab("Profile");
+  fireEvent.click(screen.getByRole("button", { name: /^Wishlist/ }));
   fireEvent.click(screen.getByRole("button", { name: "Add Etosha Woven Belt to cart" }));
 
   await waitFor(() => {
@@ -135,14 +136,16 @@ test("Designer catalogue keeps the Shop tab active when opened from Shop", async
   assert.equal(shopTab.getAttribute("aria-current"), "page");
 });
 
-test("Primary navigation is shop-first and the cart stays in the header", async () => {
+test("Primary navigation exposes the six working customer destinations", async () => {
   await renderApp();
   const navigation = within(screen.getByRole("navigation"));
-  for (const name of ["Home", "Shop", "Wishlist", "Profile"]) {
+  for (const name of ["Home", "Shop", "Designers", "Style Me", "Cart", "Profile"]) {
     assert.ok(navigation.getByRole("button", { name }));
   }
-  assert.equal(navigation.queryByRole("button", { name: /Cart/ }), null);
   assert.ok(screen.getByRole("button", { name: "Open cart, 0 items" }));
+
+  openMainTab("Designers");
+  assert.ok(screen.getByRole("heading", { name: "Designers on StylishMe" }));
 
   openMainTab("Shop");
   fireEvent.click(screen.getByRole("button", { name: "Open Oversized Coral Hoodie" }));
@@ -178,10 +181,11 @@ test("Home stays editorial while Shop owns practical catalogue discovery", async
 
   openMainTab("Shop");
   assert.ok(screen.getByRole("heading", { name: "Shop by category" }));
-  assert.ok(screen.getByRole("heading", { name: "Explore sellers" }));
-  assert.ok(screen.getByRole("button", { name: /^Designers/ }));
-  assert.ok(screen.getByRole("button", { name: /^Brands & boutiques/ }));
-  assert.ok(screen.getByRole("button", { name: /^Merch/ }));
+  const sellerDiscovery = screen.getByRole("heading", { name: "Explore sellers" }).closest("section");
+  assert.ok(sellerDiscovery);
+  assert.ok(within(sellerDiscovery).getByRole("button", { name: /^Designers/ }));
+  assert.ok(within(sellerDiscovery).getByRole("button", { name: /^Brands & boutiques/ }));
+  assert.ok(within(sellerDiscovery).getByRole("button", { name: /^Merch/ }));
   assert.ok(screen.getByRole("heading", { name: "Designer lookbooks" }));
   assert.ok(screen.getByRole("navigation", { name: "Shop shortcuts" }));
   assert.ok(screen.getByRole("button", { name: /^Near you/ }));
@@ -206,7 +210,9 @@ test("Explore sellers opens dedicated seller destinations instead of filtering S
   await renderApp();
   openMainTab("Shop");
 
-  fireEvent.click(screen.getByRole("button", { name: /^Designers/ }));
+  const sellerDiscovery = screen.getByRole("heading", { name: "Explore sellers" }).closest("section");
+  assert.ok(sellerDiscovery);
+  fireEvent.click(within(sellerDiscovery).getByRole("button", { name: /^Designers/ }));
   assert.ok(screen.getByRole("heading", { name: "Namibian designers" }));
   assert.ok(screen.getByText("Original collections, atelier stories and made-to-order pieces."));
   assert.equal(screen.queryByText("41 pieces"), null);
@@ -273,6 +279,8 @@ test("outfit of the day opens as a focused single-look experience", async () => 
   assert.equal(screen.queryByLabelText("Choose a curated outfit"), null);
   assert.equal(screen.queryByRole("button", { name: /Coastline Weekend/ }), null);
   assert.equal(screen.queryByRole("button", { name: /Gallery Opening/ }), null);
+  assert.equal(screen.queryByRole("button", { name: /Replace / }), null);
+  assert.equal(screen.queryByRole("button", { name: /Save Outfit/ }), null);
 });
 
 test("a curated look can replace one piece while keeping the rest", async () => {
@@ -294,8 +302,9 @@ test("wishlist and wardrobe keep saved pieces, looks and purchases connected", a
     profile: { city: "Windhoek", size: "M", shoe: "39", fit: "Regular" },
   });
 
-  await waitFor(() => assert.ok(screen.getByRole("button", { name: /Wishlist$/ })));
-  openMainTab("Wishlist");
+  await waitFor(() => assert.ok(screen.getByRole("button", { name: "Profile" })));
+  openMainTab("Profile");
+  fireEvent.click(screen.getByRole("button", { name: /^Wishlist/ }));
   assert.ok(document.querySelector(".wishlist-grid"));
   assert.ok(document.querySelector(".wishlist-product-card"));
   assert.ok(screen.getByRole("heading", { name: "Saved looks" }));

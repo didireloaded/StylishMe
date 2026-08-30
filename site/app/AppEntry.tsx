@@ -5,10 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import SellerApp from "./SellerApp";
 import StorefrontView from "./StorefrontView";
 import StylishMeApp from "./StylishMeApp";
+import { buildProduct } from "./product-catalog";
 import type { AccountRole } from "./unified-domain";
 
 type User = { name: string; email: string; avatarUrl?: string | null };
 type EntryStage = "welcome" | "highlights" | "role";
+
+const onboardingLooks = [0, 2, 4, 9, 10, 11].map(buildProduct);
 
 export default function AppEntry({ user }: { user: User | null }) {
   const [stage, setStage] = useState<EntryStage>("welcome");
@@ -21,6 +24,11 @@ export default function AppEntry({ user }: { user: User | null }) {
     const value = new URLSearchParams(window.location.search).get("join");
     return value === "customer" || value === "seller" ? value : null;
   }, []);
+  const onboardingLook = useMemo(() => {
+    const identity = user?.email || "stylishme";
+    const index = Array.from(identity).reduce((total, letter) => total + letter.charCodeAt(0), 0) % onboardingLooks.length;
+    return onboardingLooks[index];
+  }, [user?.email]);
 
   const track = (event: string, targetType?: string, targetId?: string) => {
     const sessionKey = "stylishme-session-id";
@@ -117,7 +125,9 @@ export default function AppEntry({ user }: { user: User | null }) {
     <section className="entry-shell">
       <header><strong>STYLISHME</strong><span>Namibian fashion, personally yours.</span></header>
       {stage === "welcome" && <>
-        <div className="entry-art" aria-hidden="true"><span>FIND</span><span>THE</span><span>LOOK.</span></div>
+        <div className="entry-art" style={{ backgroundImage: `linear-gradient(180deg, rgba(16, 16, 18, 0.05), rgba(16, 16, 18, 0.94)), url("${onboardingLook.image}")` }}>
+          <div><small>FEATURED NAMIBIAN DESIGNER</small><strong>{onboardingLook.designer}</strong><span>{onboardingLook.name}</span></div>
+        </div>
         <div className="entry-copy">
           <small>WELCOME TO STYLISHME</small>
           <h1>Your personal guide to Namibian fashion.</h1>
@@ -132,9 +142,9 @@ export default function AppEntry({ user }: { user: User | null }) {
           <p>Everything supports a simple journey from inspiration to a confident order.</p>
         </div>
         <div className="onboarding-highlights">
-          <article><span>01</span><div><strong>Discover what is new</strong><small>Outfits of the day, local designers and fresh collections.</small></div></article>
-          <article><span>02</span><div><strong>Build the complete look</strong><small>Style Me creates shoppable outfits for your occasion and budget.</small></div></article>
-          <article><span>03</span><div><strong>Shop with confidence</strong><small>Save your fit, preview looks and choose delivery or collection.</small></div></article>
+          <article><div><strong>Discover what is new</strong><small>Outfits of the day, local designers and fresh collections.</small></div></article>
+          <article><div><strong>Build the complete look</strong><small>Style Me creates shoppable outfits for your occasion and budget.</small></div></article>
+          <article><div><strong>Shop with confidence</strong><small>Save your fit, preview looks and choose delivery or collection.</small></div></article>
         </div>
         <button className="entry-primary" onClick={() => setStage("role")}>Continue</button>
         <button className="entry-back" onClick={() => setStage("welcome")}>Back</button>
@@ -147,11 +157,11 @@ export default function AppEntry({ user }: { user: User | null }) {
         </div>
         <div className="role-cards">
           <button onClick={() => void chooseRole("customer")}>
-            <span>01</span><strong>Shop fashion</strong>
+            <strong>Shop fashion</strong>
             <small>Discover looks, stores and designers. Save, style and order.</small><b>Continue as customer →</b>
           </button>
           <button onClick={() => void chooseRole("seller")}>
-            <span>02</span><strong>Sell on StylishMe</strong>
+            <strong>Sell on StylishMe</strong>
             <small>Create your store, publish collections and manage customer orders.</small><b>Continue as seller →</b>
           </button>
         </div>

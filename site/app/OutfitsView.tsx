@@ -113,19 +113,19 @@ export default function OutfitsView({
               <small>{money(product.price)}</small>
               <span className="outfit-item-link">View item</span>
             </button>
-            <button className="outfit-replace" aria-label={`Replace ${product.name}`} onClick={() => onReplace(product.originalId, product.id)}>Replace</button>
+            {!focused && <button className="outfit-replace" aria-label={`Replace ${product.name}`} onClick={() => onReplace(product.originalId, product.id)}>Replace</button>}
           </article>
         ))}
       </div>
 
       <div className="outfit-actions">
-        <button
+        {!focused && <button
           className={`outline-button ${saved ? "saved" : ""}`}
           aria-pressed={saved}
           onClick={() => onSave(selected.id)}
         >
           {saved ? "Saved Outfit" : "Save Outfit"}
-        </button>
+        </button>}
         <button className="outline-button try-look" disabled={!availableCount} onClick={() => onTryOn(items.filter((item) => item.available).map((item) => item.id))}>
           Try On This Look
         </button>

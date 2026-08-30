@@ -14,7 +14,7 @@ test("store and product sharing use stable path-based deep links", async () => {
   assert.equal(domain.catalogueProductUrl("Coastline Atelier", "Linen Shirt"), "/stores/coastline-atelier/products/linen-shirt");
 });
 
-test("deep-link pages protect the session and render one scoped storefront", async () => {
+test("deep-link pages stay publicly browsable and render one scoped storefront", async () => {
   const [storePage, productPage, storefront] = await Promise.all([
     read("app/stores/[storeSlug]/page.tsx"),
     read("app/stores/[storeSlug]/products/[productSlug]/page.tsx"),
@@ -22,8 +22,8 @@ test("deep-link pages protect the session and render one scoped storefront", asy
   ]);
 
   for (const page of [storePage, productPage]) {
-    assert.match(page, /getStylishMeUser/);
-    assert.match(page, /redirect\(/);
+    assert.doesNotMatch(page, /getStylishMeUser/);
+    assert.doesNotMatch(page, /redirect\(/);
     assert.match(page, /StorefrontView/);
   }
   assert.match(productPage, /productSlug/);

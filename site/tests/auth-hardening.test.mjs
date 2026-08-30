@@ -59,9 +59,11 @@ test("login gives explicit logout feedback and never offers guest access", async
   assert.match(source, /AuthForm/);
 });
 
-test("the storefront is protected on the server before customer UI renders", async () => {
+test("the storefront is public while receiving optional session details", async () => {
   const source = await read("app/page.tsx");
-  assert.match(source, /redirect\(`\/login\?returnTo=/);
+  assert.match(source, /getStylishMeUser\(\)/);
+  assert.match(source, /<AppEntry user=\{user \?/);
+  assert.doesNotMatch(source, /redirect\(`\/login\?returnTo=/);
   assert.doesNotMatch(source, /SessionResetGate/);
 });
 

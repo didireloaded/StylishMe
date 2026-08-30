@@ -66,9 +66,15 @@ const tours = {
 const joinUrl = (role: DemoRole) =>
   `/login?returnTo=${encodeURIComponent(`/?join=${role}`)}`;
 
-export default function DemoExperience() {
-  const [role, setRole] = useState<DemoRole | null>(null);
-  const [stage, setStage] = useState<DemoStage>("choose");
+export default function DemoExperience({
+  initialRole = null,
+  initialStage = "choose",
+}: {
+  initialRole?: DemoRole | null;
+  initialStage?: DemoStage;
+}) {
+  const [role, setRole] = useState<DemoRole | null>(initialRole);
+  const [stage, setStage] = useState<DemoStage>(initialRole ? initialStage : "choose");
   const [slide, setSlide] = useState(0);
 
   const choose = (next: DemoRole) => {

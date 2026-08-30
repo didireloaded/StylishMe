@@ -1,4 +1,4 @@
-const CACHE_NAME = "stylishme-static-v2";
+const CACHE_NAME = "stylishme-static-v3";
 const OFFLINE_URL = "/offline.html";
 const CORE_ASSETS = [
   OFFLINE_URL,
@@ -37,8 +37,22 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (["script", "style"].includes(request.destination)) {
+    event.respondWith(
+      fetch(request)
+        .then(async (response) => {
+          if (!response || !response.ok) return response;
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(request, response.clone());
+          return response;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
+
   const isStaticAsset = CORE_ASSETS.includes(url.pathname)
-    || ["font", "image", "script", "style"].includes(request.destination);
+    || ["font", "image"].includes(request.destination);
   if (!isStaticAsset) return;
 
   event.respondWith(

@@ -14,6 +14,8 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
+afterEach(() => window.history.replaceState({}, "", "/"));
+
 test("the shared preview starts with a clear customer or seller choice", () => {
   render(React.createElement(DemoExperience));
 
@@ -51,6 +53,14 @@ test("the seller walkthrough opens a seeded seller preview without loading priva
   assert.ok(screen.getByRole("heading", { name: "Good morning, Maria." }));
   assert.equal(requests, 0);
   assert.match(screen.getByRole("link", { name: "Sign up as a vendor" }).getAttribute("href"), /join%3Dseller/);
+});
+
+test("a direct seller demo link opens the real seller workspace for review", async () => {
+  render(React.createElement(DemoExperience, { initialRole: "seller", initialStage: "explore" }));
+
+  assert.ok(await screen.findByText("SELLER DEMO"));
+  assert.ok(screen.getByRole("heading", { name: "Good morning, Maria." }));
+  assert.ok(screen.getByRole("button", { name: "Products" }));
 });
 
 test("the one-time account reset removes only StylishMe device data", () => {

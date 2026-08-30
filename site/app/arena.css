@@ -141,6 +141,17 @@ select:focus-visible {
   gap: 3px;
 }
 
+.reference-welcome .brand-header > .reference-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.reference-welcome .reference-header-actions .circle-btn {
+  width: 36px;
+  height: 36px;
+}
+
 .reference-welcome .brand-header small {
   margin: 0;
   color: var(--arena-text);
@@ -183,7 +194,7 @@ select:focus-visible {
 .reference-stats-capsule,
 .profile-stats-bar {
   display: grid;
-  grid-template-columns: 50px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 50px repeat(4, minmax(0, 1fr));
   align-items: center;
   gap: 6px;
   min-height: 76px;
@@ -468,6 +479,8 @@ select:focus-visible {
   width: fit-content;
   min-height: 42px;
   padding-inline: 14px;
+  color: #1c1c1e;
+  background: #ffffff;
 }
 
 .reference-customer-shell .outline-button {
@@ -710,6 +723,61 @@ select:focus-visible {
 .reference-customer-shell .lookbook-row b,
 .reference-customer-shell .shop-shortcuts b {
   color: var(--arena-accent);
+}
+
+.reference-customer-shell .stores-intro {
+  padding: 20px 4px 24px;
+}
+
+.reference-customer-shell .stores-intro > small {
+  color: var(--arena-accent);
+}
+
+.reference-customer-shell .stores-intro h1 {
+  margin: 10px 0;
+  color: var(--arena-text);
+  font-family: inherit;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: .98;
+}
+
+.reference-customer-shell .stores-intro > p {
+  color: var(--arena-muted);
+}
+
+.reference-customer-shell .stores-featured {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 0 30px;
+}
+
+.reference-customer-shell .stores-featured > button,
+.reference-customer-shell .stores-featured > button:first-child {
+  min-height: 0;
+  aspect-ratio: .76;
+  grid-column: auto;
+  border-radius: var(--arena-radius-md);
+}
+
+.reference-customer-shell .stores-featured span {
+  right: 12px;
+  bottom: 13px;
+  left: 12px;
+}
+
+.reference-customer-shell .stores-featured strong {
+  color: var(--arena-text);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.reference-customer-shell .stores-featured b {
+  color: var(--arena-accent);
+  font-size: 8px;
 }
 
 .reference-customer-shell .lookbook-row {
@@ -1065,6 +1133,11 @@ select:focus-visible {
   color: var(--arena-muted);
 }
 
+.reference-customer-shell .cart-line s {
+  color: var(--arena-muted);
+  font-size: 9px;
+}
+
 .reference-customer-shell .quantity {
   display: grid;
   justify-items: center;
@@ -1097,6 +1170,10 @@ select:focus-visible {
 .reference-customer-shell .summary-card .total,
 .reference-customer-shell .summary-card .total strong {
   color: var(--arena-accent);
+}
+
+.reference-customer-shell .summary-card .discount strong {
+  color: #8fe0ae;
 }
 
 .reference-customer-shell .summary-card .gradient-button {
@@ -1214,10 +1291,10 @@ select:focus-visible {
   bottom: calc(16px + env(safe-area-inset-bottom));
   left: 50%;
   display: grid;
-  width: min(calc(100% - 44px), 386px);
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: min(calc(100% - 24px), 414px);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
-  padding: 9px 14px;
+  padding: 7px 8px;
   transform: translateX(-50%);
   background: rgba(44, 44, 46, 0.94);
   border: 1px solid var(--arena-line);
@@ -1229,7 +1306,7 @@ select:focus-visible {
 .reference-customer-shell .bottom-nav button {
   min-width: 0;
   min-height: 52px;
-  padding: 6px 4px;
+  padding: 6px 2px;
   color: var(--arena-muted);
   background: transparent;
   border-radius: 14px;
@@ -1250,8 +1327,9 @@ select:focus-visible {
 }
 
 .reference-customer-shell .bottom-nav button > span {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .reference-customer-shell .toast {
@@ -1338,7 +1416,46 @@ select:focus-visible {
 
 .entry-art {
   color: var(--arena-text);
-  background: linear-gradient(180deg, rgba(28, 28, 30, 0.16), rgba(28, 28, 30, 0.95)), url("https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1400&q=86") center/cover;
+  position: relative;
+  display: flex;
+  min-height: min(58dvh, 620px);
+  align-items: flex-end;
+  margin: 24px 0;
+  padding: 28px;
+  overflow: hidden;
+  background-color: var(--arena-surface);
+  background-position: center 24%;
+  background-size: cover;
+  border: 1px solid var(--arena-line);
+  border-radius: var(--arena-radius-lg);
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.entry-art > div {
+  display: grid;
+  gap: 6px;
+}
+
+.entry-art > div small {
+  color: var(--arena-accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.entry-art > div strong {
+  color: var(--arena-text);
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.entry-art > div span {
+  color: #d1d1d6;
+  font-size: 12px;
 }
 
 .onboarding-highlights article,
@@ -1348,6 +1465,19 @@ select:focus-visible {
   background: var(--arena-surface);
   border: 1px solid var(--arena-line);
   border-radius: var(--arena-radius-lg);
+}
+
+.onboarding-highlights article {
+  min-height: 164px;
+  align-items: flex-end;
+}
+
+.onboarding-highlights article > div {
+  align-content: end;
+}
+
+.role-cards > button {
+  min-height: 260px;
 }
 
 .onboarding-highlights article span,
@@ -1361,6 +1491,70 @@ select:focus-visible {
 .role-cards small,
 .demo-role-grid p {
   color: var(--arena-muted);
+}
+
+.auth-page {
+  padding: 24px;
+}
+
+.auth-page .auth-shell {
+  position: relative;
+  display: grid;
+  width: min(100%, 1180px);
+  min-height: calc(100dvh - 48px);
+  grid-template-columns: minmax(0, 1.08fr) minmax(380px, .92fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--arena-line);
+  border-radius: var(--arena-radius-lg);
+}
+
+.auth-page .auth-shell > header {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 24px 28px;
+  border: 0;
+}
+
+.auth-page .auth-shell > header span {
+  display: none;
+}
+
+.auth-page .auth-intro {
+  display: flex;
+  min-height: 700px;
+  max-width: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 110px 42px 42px;
+  background:
+    linear-gradient(180deg, rgba(18, 18, 20, .08) 20%, rgba(18, 18, 20, .93) 92%),
+    url("https://images.pexels.com/photos/29717200/pexels-photo-29717200.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop") center 24% / cover;
+}
+
+.auth-page .auth-intro h1 {
+  max-width: 600px;
+  margin: 14px 0;
+  font-size: clamp(42px, 5.4vw, 72px);
+  line-height: .95;
+}
+
+.auth-page .auth-intro p {
+  max-width: 470px;
+  margin: 0;
+  color: #d1d1d6;
+}
+
+.auth-page .account-auth {
+  width: auto;
+  margin: 76px 34px 34px;
+  align-self: center;
+  padding: 28px;
+  border-radius: var(--arena-radius-md);
 }
 
 .account-auth {
@@ -1431,6 +1625,30 @@ select:focus-visible {
 .demo-tour-photo,
 .demo-role-grid img {
   background: var(--arena-surface);
+}
+
+.demo-role-grid button strong {
+  color: var(--arena-text);
+  font-family: inherit;
+  font-size: clamp(28px, 3.2vw, 42px);
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.demo-role-grid button b {
+  display: inline-grid;
+  width: fit-content;
+  min-width: 108px;
+  min-height: 40px;
+  place-items: center;
+  align-self: end;
+  padding: 0 18px;
+  color: var(--arena-bg);
+  background: var(--arena-accent);
+  border-radius: var(--arena-radius-sm);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .demo-tour-copy,
@@ -1633,6 +1851,28 @@ select:focus-visible {
   overflow: hidden;
 }
 
+.seller-product-card .seller-merch-badge {
+  position: absolute;
+  z-index: 2;
+  bottom: 12px;
+  left: 12px;
+  padding: 6px 9px;
+  color: var(--arena-bg);
+  background: var(--arena-accent);
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.seller-app .product-copy strong s {
+  margin-left: 5px;
+  color: var(--arena-muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .seller-product-card .product-photo {
   background: var(--arena-surface-raised);
 }
@@ -1816,6 +2056,38 @@ select:focus-visible {
 }
 
 @media (max-width: 600px) {
+  .auth-page {
+    padding: 0;
+  }
+
+  .auth-page .auth-shell {
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .auth-page .auth-intro {
+    min-height: 330px;
+    padding: 98px 22px 40px;
+  }
+
+  .auth-page .auth-intro h1 {
+    max-width: 420px;
+    font-size: 40px;
+  }
+
+  .auth-page .account-auth {
+    width: 100%;
+    margin: -18px 0 0;
+    padding: 24px 20px max(32px, env(safe-area-inset-bottom));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: var(--arena-radius-lg) var(--arena-radius-lg) 0 0;
+    box-shadow: none;
+  }
+
   .auth-shell,
   .entry-shell,
   .demo-shell {
@@ -1861,8 +2133,14 @@ select:focus-visible {
   }
 
   .reference-stats-capsule {
-    grid-template-columns: 44px repeat(3, minmax(0, 1fr));
-    padding-inline: 10px;
+    grid-template-columns: 42px repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    padding-inline: 8px;
+  }
+
+  .reference-avatar {
+    width: 42px;
+    height: 42px;
   }
 
   .reference-category-links {

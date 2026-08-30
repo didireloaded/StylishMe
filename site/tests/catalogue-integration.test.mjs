@@ -42,6 +42,19 @@ test("normalizes only validated live seller products into integer-priced catalog
   assert.deepEqual(result.variants.map((variant) => [variant.size, variant.colour, variant.availableQuantity]), [["M", "Sand", 4]]);
 });
 
+test("publishes seller discounts and launch badges into customer catalogue metadata", async () => {
+  const { normalizeSellerCatalogue } = await import("../app/catalogue-domain.ts");
+  const result = normalizeSellerCatalogue({
+    store: { name: "Omutima Studio", type: "Designer", city: "Windhoek" },
+    products: [readyProduct({ salePrice: 999, badge: "Limited Drop" })],
+  }, "seller-sale");
+
+  assert.equal(result.products[0].priceCents, 99900);
+  const metadata = JSON.parse(result.products[0].metadataJson);
+  assert.equal(metadata.oldPrice, 1250);
+  assert.equal(metadata.badge, "Limited Drop");
+});
+
 test("duplicate product names receive deterministic collision-safe slugs", async () => {
   const { normalizeSellerCatalogue } = await import("../app/catalogue-domain.ts");
   const state = {

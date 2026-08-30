@@ -187,6 +187,7 @@ function Icon({ name }: { name: string }) {
   if (name === "home") return <svg {...common}><path d="m3 11 9-8 9 8" /><path d="M5 10v11h14V10M9 21v-7h6v7" /></svg>;
   if (name === "shop") return <svg {...common}><path d="M4 9h16l-1 12H5L4 9Z" /><path d="M8 9a4 4 0 0 1 8 0" /></svg>;
   if (name === "sparkles") return <svg {...common}><path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z" /><path d="m18.5 14 .72 2.28L21.5 17l-2.28.72L18.5 20l-.72-2.28L15.5 17l2.28-.72L18.5 14Z" /><path d="m5 13 .5 1.5L7 15l-1.5.5L5 17l-.5-1.5L3 15l1.5-.5L5 13Z" /></svg>;
+  if (name === "designer") return <svg {...common}><path d="m12 3 2.2 5.2L20 10l-4.4 3.7.2 5.8-3.8-3-3.8 3 .2-5.8L4 10l5.8-1.8L12 3Z" /></svg>;
   if (name === "heart") return <svg {...common}><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z" /></svg>;
   if (name === "profile") return <svg {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>;
   if (name === "share") return <svg {...common}><path d="M12 16V3m0 0L7 8m5-5 5 5" /><path d="M5 12v9h14v-9" /></svg>;
@@ -310,6 +311,12 @@ export default function StylishMeApp({
   const sellerDirectoryNames = sellerLaneNames[sellerLane];
   const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0);
   const subtotal = cart.reduce((sum, line) => sum + (products.find(p => p.id === line.productId)?.price ?? 0) * line.quantity, 0);
+  const originalSubtotal = cart.reduce((sum, line) => {
+    const product = products.find(p => p.id === line.productId);
+    return sum + (product?.oldPrice ?? product?.price ?? 0) * line.quantity;
+  }, 0);
+  const discount = Math.max(0, originalSubtotal - subtotal);
+  const boughtCount = orders.filter((order) => order.status !== "Cancelled").reduce((sum, order) => sum + order.items.reduce((quantity, item) => quantity + item.quantity, 0), 0);
   const fee = delivery === "Store collection" ? 0 : delivery === "Express delivery" ? 120 : 65;
   const checkoutNeedsAddress = checkoutStep === 1 && delivery !== "Store collection" && addresses.length === 0;
   const filteredOrders = orders.filter((order) => orderFilter === "Active"
@@ -811,15 +818,15 @@ export default function StylishMeApp({
   let content: React.ReactNode;
   if (view === "home") content = <>
     <section className="reference-welcome" aria-label="StylishMe welcome">
-      <header className="brand-header"><div><small>WELCOME</small><h1>{user?.name ?? "STYLISHME"}</h1></div><button onClick={() => navigate("profile")} className="reference-menu" aria-label="Open profile"><span /><span /><span /></button></header>
+      <header className="brand-header"><div><small>WELCOME</small><h1>{user?.name ?? "STYLISHME"}</h1></div><div className="reference-header-actions" aria-label="Quick actions"><button onClick={openStoryComposer} className="circle-btn post-outfit-button" aria-label="Post an outfit"><Icon name="plus" /></button><button onClick={() => navigate("notifications")} className="circle-btn" aria-label="Notifications"><Icon name="bell" /></button>{cartButton()}</div></header>
       <div className="reference-stats-capsule">
         <div className="reference-avatar">{user?.avatarUrl ? <img src={user.avatarUrl} alt="" /> : "S"}</div>
-        <strong>{followedDesigners.length}<small>Following</small></strong>
-        <strong>{wishlist.length}<small>Saved</small></strong>
+        <strong>{savedOutfits.length}<small>Saved</small></strong>
+        <strong>{wishlist.length}<small>Liked</small></strong>
+        <strong>{boughtCount}<small>Bought</small></strong>
         <strong>{orders.length}<small>Orders</small></strong>
       </div>
     </section>
-    <div className="reference-utility-row" aria-label="Quick actions"><button onClick={openStoryComposer} className="circle-btn post-outfit-button" aria-label="Post an outfit"><Icon name="plus" /></button><button onClick={() => navigate("search")} className="circle-btn" aria-label="Search"><Icon name="search" /></button><button onClick={() => navigate("notifications")} className="circle-btn" aria-label="Notifications"><Icon name="bell" /></button>{cartButton()}</div>
     <button className="home-search" onClick={() => navigate("search")}><Icon name="search" /><span>Search products, stores and designers</span></button>
     <section className="reference-feed-heading" aria-labelledby="home-editorial-title">
       <h2 id="home-editorial-title">FOR YOU</h2>
@@ -955,11 +962,11 @@ export default function StylishMeApp({
       `${name} ${designerSummaries[name].location}`.toLowerCase().includes(storeQuery.toLowerCase().trim()),
     ).sort((a, b) => Number(b === featuredDesigner) - Number(a === featuredDesigner));
     content = <>
-      {header("Stores")}
+      {header("Designers")}
       <section className="stores-intro">
-        <small>SHOP THEIR WORLD</small><h1>Stores on StylishMe</h1>
-        <p>Discover selected Namibian designers, boutiques, brands and merch collections.</p>
-        <div className="search-wrap"><input value={storeQuery} onChange={(event) => setStoreQuery(event.target.value)} placeholder="Search stores and designers" /></div>
+        <small>NAMIBIAN RUNWAY TO REAL LIFE</small><h1>Designers on StylishMe</h1>
+        <p>Explore original collections, limited pieces and the people shaping fashion in Namibia.</p>
+        <div className="search-wrap"><input value={storeQuery} onChange={(event) => setStoreQuery(event.target.value)} placeholder="Search Namibian designers" /></div>
       </section>
       <section className="stores-featured" aria-label="StylishMe stores">
         {visibleStores.map((name) => {
@@ -1024,7 +1031,7 @@ export default function StylishMeApp({
     signInUrl="/login?returnTo=/"
   /></>;
   else if (view === "wishlist") content = <>{header("Wishlist")}<section aria-labelledby="saved-pieces-title"><div className="section-title wishlist-section-title"><div><small>YOUR PERSONAL EDIT</small><h2 id="saved-pieces-title">Saved pieces</h2></div><span>{wishlist.length}</span></div><div className="wishlist-grid">{wishlist.flatMap(id => { const p = productById.get(id); if (!p) return []; return [<article className="wishlist-product-card" key={id}><button className="wishlist-product-image" aria-label={`Open ${p.name}`} onClick={() => openProduct(id)}><img src={p.image} alt={p.name} />{p.badge && <span className="badge">{p.badge}</span>}</button><button className="wishlist-remove" onClick={() => toggleWishlist(id)} aria-label={`Remove ${p.name} from wishlist`}>♥</button><div className="wishlist-product-copy"><small>{p.designer}</small><button onClick={() => openProduct(id)}>{p.name}</button><strong>{money(p.price)}</strong></div><div className="wishlist-actions"><button onClick={() => startTryOn([p.id])} aria-label={`Try on ${p.name}`}>Try On</button><button onClick={() => quickAddWishlistItem(p)} aria-label={`Add ${p.name} to cart`}>Add to bag</button></div></article>]; })}{!wishlist.length && <div className="empty compact-empty"><h2>Your wishlist is waiting</h2><button className="gradient-button" onClick={() => navigate("shop")}>Discover pieces</button></div>}</div></section>{savedOutfits.length > 0 && <section className="saved-look-section" aria-labelledby="saved-looks-title"><div className="section-title wishlist-section-title"><h2 id="saved-looks-title">Saved looks</h2><span>{savedOutfits.length}</span></div><div className="saved-look-list">{savedOutfits.flatMap((id) => { const outfit = OUTFITS.find((item) => item.id === id); if (!outfit) return []; return [<article className="saved-look-card" key={outfit.id}><button className="saved-look-main" aria-label={`Open ${outfit.title}`} onClick={() => openOutfit(outfit.id)}><img src={outfit.image} alt="" /><span><small>{outfit.location}</small><strong>{outfit.title}</strong><b>{outfit.productIds.length} pieces</b></span></button><div><button className="outline-button" aria-label={`Try on ${outfit.title}`} onClick={() => startTryOn(outfit.productIds)}>Try On</button><button aria-label={`Remove ${outfit.title} from saved looks`} onClick={() => toggleSavedOutfit(outfit.id)}>♥</button></div></article>]; })}</div></section>}</>;
-  else if (view === "cart") content = <>{header("My Cart")}<div className="list-stack">{cart.flatMap((line, index) => { const p = productById.get(line.productId); if (!p) return []; const atStockLimit = line.quantity >= getSizeStock(p, line.size); return [<article className="list-item cart-line" key={`${line.productId}-${line.size}-${line.color}`}><img src={p.image} alt={p.name} /><button onClick={() => openProduct(p.id)}><strong>{p.name}</strong><small>{line.size} · {p.designer}</small><span>{money(p.price)}</span></button><div className="quantity"><button onClick={() => updateQty(index, -1)} aria-label={`Decrease ${p.name} quantity`}>−</button><span aria-label={`${p.name} quantity`}>{line.quantity}</span><button disabled={atStockLimit} onClick={() => updateQty(index, 1)} aria-label={`Increase ${p.name} quantity`}>+</button></div>{atStockLimit && <small className="stock-limit">Maximum available</small>}</article>]; })}</div>{cart.length ? <section className="summary-card"><p><span>Subtotal</span><strong>{money(subtotal)}</strong></p><p><span>Delivery estimate</span><strong>{money(fee)}</strong></p><p className="total"><span>Total</span><strong>{money(subtotal + fee)}</strong></p><button className="gradient-button" onClick={() => navigate("checkout")}>Checkout</button></section> : <div className="empty"><h2>Your cart is empty</h2><p>Discover something made for you.</p><button className="gradient-button" onClick={() => navigate("shop")}>Start shopping</button></div>}</>;
+  else if (view === "cart") content = <>{header("My Cart")}<div className="list-stack">{cart.flatMap((line, index) => { const p = productById.get(line.productId); if (!p) return []; const atStockLimit = line.quantity >= getSizeStock(p, line.size); return [<article className="list-item cart-line" key={`${line.productId}-${line.size}-${line.color}`}><img src={p.image} alt={p.name} /><button onClick={() => openProduct(p.id)}><strong>{p.name}</strong><small>{line.size} · {p.designer}</small><span>{money(p.price)} {p.oldPrice && <s>{money(p.oldPrice)}</s>}</span></button><div className="quantity"><button onClick={() => updateQty(index, -1)} aria-label={`Decrease ${p.name} quantity`}>−</button><span aria-label={`${p.name} quantity`}>{line.quantity}</span><button disabled={atStockLimit} onClick={() => updateQty(index, 1)} aria-label={`Increase ${p.name} quantity`}>+</button></div>{atStockLimit && <small className="stock-limit">Maximum available</small>}</article>]; })}</div>{cart.length ? <section className="summary-card"><p><span>Items subtotal</span><strong>{money(originalSubtotal)}</strong></p>{discount > 0 && <p className="discount"><span>Discount</span><strong>−{money(discount)}</strong></p>}<p><span>Delivery estimate</span><strong>{money(fee)}</strong></p><p className="total"><span>Total</span><strong>{money(subtotal + fee)}</strong></p><button className="gradient-button" onClick={() => navigate("checkout")}>Checkout & pay</button></section> : <div className="empty"><h2>Your cart is empty</h2><p>Discover something made for you.</p><button className="gradient-button" onClick={() => navigate("shop")}>Start shopping</button></div>}</>;
   else if (view === "checkout") { const steps = ["Delivery", delivery === "Store collection" ? "Collection" : "Address", "Payment", "Review"]; content = <>{header("Checkout", "cart")}<div className="stepper">{steps.map((step, i) => <span className={i <= checkoutStep ? "active" : ""} key={step}>{i + 1}<small>{step}</small></span>)}</div><section className="checkout-panel">{checkoutStep === 0 && <><h2>How should we get it to you?</h2>{["Standard delivery", "Express delivery", "Store collection"].map(item => <label key={item}><input type="radio" name="delivery" checked={delivery === item} onChange={() => setDelivery(item)} /><span><strong>{item}</strong><small>{item === "Store collection" ? "Free · ready in 1–2 days" : item === "Express delivery" ? "N$120 · next working day" : "N$65 · 2–4 days"}</small></span></label>)}</>}{checkoutStep === 1 && <><h2>{checkoutDestinationHeading(delivery)}</h2>{delivery === "Store collection" ? <><label className="address-option"><input type="radio" name="collection-store" defaultChecked /><span><strong>Omutima Studio</strong><small>12 Independence Avenue, Windhoek · Free collection</small></span></label><p className="sandbox-note">We will notify you when the order is ready. Collection orders do not use delivery tracking.</p></> : <><label className="address-option"><input type="radio" checked readOnly /><span><strong>{addresses[0]?.label ?? "Home"}</strong><small>{addresses[0] ? `${addresses[0].street}, ${addresses[0].city}` : "Add a delivery address"}</small></span></label><button className="outline-button" onClick={() => { setAddressesReturnView("checkout"); navigate("addresses"); }}>Add another address</button></>}</>}{checkoutStep === 2 && <><h2>Payment method</h2>{demoMode ? <label><input type="radio" name="pay" checked readOnly /><span><strong>Demo payment</strong><small>No real charge in preview mode</small></span></label> : paymentAvailable ? <label><input type="radio" name="pay" checked readOnly /><span><strong>Secure online payment</strong><small>Continue to DPO Pay to choose an available payment method</small></span></label> : <p className="sandbox-note">{paymentConfigLoaded ? "Secure payments are being connected. Checkout is unavailable until the merchant account is activated." : "Checking secure payment availability…"}</p>}</>}{checkoutStep === 3 && <><h2>Review your order</h2>{demoMode ? <p className="sandbox-note">Preview checkout — no real payment will be processed.</p> : <p className="sandbox-note">You will continue to DPO Pay to complete payment securely.</p>}{cart.map(line => <p key={line.productId} className="review-line"><span>{products.find(p => p.id === line.productId)?.name} × {line.quantity}</span><strong>{money((products.find(p => p.id === line.productId)?.price ?? 0) * line.quantity)}</strong></p>)}<p className="review-line total"><span>Total</span><strong>{money(subtotal + fee)}</strong></p></>}</section><div className="checkout-actions">{checkoutStep > 0 && <button onClick={() => setCheckoutStep(s => s - 1)} className="outline-button">Back</button>}<button onClick={() => checkoutStep < 3 ? setCheckoutStep(s => s + 1) : void placeOrder()} className="gradient-button" disabled={placingOrder || checkoutNeedsAddress || (!demoMode && (!paymentConfigLoaded || !paymentAvailable))} aria-busy={placingOrder}>{checkoutNeedsAddress ? "Add a delivery address" : checkoutStep < 3 ? "Continue" : placingOrder ? "Opening secure payment…" : demoMode ? "Place preview order" : !paymentConfigLoaded ? "Checking payment…" : paymentAvailable ? "Continue to secure payment" : "Payments unavailable"}</button></div></>; }
   else if (view === "confirmation") content = <div className="success-screen"><span>✓</span><small>{isCollectionOrder ? "COLLECTION CONFIRMED" : "ORDER CONFIRMED"}</small><h1>{isCollectionOrder ? "We’ll have it ready." : "It’s officially yours."}</h1><p>{isCollectionOrder ? "We will notify you when your order is ready to collect in store." : "Your order is being prepared. Estimated delivery: 18–20 July."}</p><strong>{selectedOrder?.id}</strong><button className="gradient-button" onClick={() => navigate("tracking")}>{isCollectionOrder ? "View collection status" : "Track delivery"}</button><button className="outline-button" onClick={() => navigate("home")}>Continue shopping</button></div>;
   else if (view === "orders") content = <>{header("My Orders", "profile")}<div className="chip-row">{(["Active", "Delivered", "Cancelled"] as const).map((filter) => <button key={filter} className={orderFilter === filter ? "active" : ""} aria-pressed={orderFilter === filter} onClick={() => setOrderFilter(filter)}>{filter}</button>)}</div><div className="order-list">{filteredOrders.map(order => <button key={order.id} onClick={() => { setSelectedOrderId(order.id); navigate("tracking"); }}><small>{order.date}</small><strong>{order.id}</strong><span>{order.status} · {order.fulfilment ?? "Standard delivery"} · {money(order.total)}</span><div>{order.items.slice(0, 3).map(line => <img key={line.productId} src={products.find(p => p.id === line.productId)?.image} alt="" />)}</div></button>)}{!filteredOrders.length && <div className="empty compact-empty"><h2>No {orderFilter.toLowerCase()} orders</h2><p>Your matching orders will appear here.</p></div>}</div></>;
@@ -1094,7 +1101,9 @@ export default function StylishMeApp({
   const mainTabs: Array<[string, View, string]> = [
     ["Home", "home", "home"],
     ["Shop", "shop", "shop"],
-    ["Wishlist", "wishlist", "heart"],
+    ["Designers", "stores", "designer"],
+    ["Style Me", "try-on", "sparkles"],
+    ["Cart", "cart", "bag"],
     ["Profile", "profile", "profile"],
   ];
   const designerOrigin = designerReturnView === "product" ? productReturnView : designerReturnView;
@@ -1102,9 +1111,9 @@ export default function StylishMeApp({
     target === view ||
     (target === "shop" && view === "seller-directory") ||
     (target === "stores" && view === "designer" && designerOrigin === "stores") ||
+    (target === "cart" && ["checkout", "confirmation"].includes(view)) ||
     (target === "home" && view === "designer" && designerOrigin === "home") ||
     (target === "shop" && view === "designer" && ["shop", "search"].includes(designerOrigin)) ||
-    (target === "wishlist" && view === "designer" && designerOrigin === "wishlist") ||
     (target === "profile" && view === "designer" && profileViews.includes(designerOrigin)) ||
     (target === "profile" && profileViews.includes(view));
   return (
@@ -1119,7 +1128,7 @@ export default function StylishMeApp({
           <nav className="bottom-nav">
             {mainTabs.map(([label, target, icon]) => {
               const active = isMainTabActive(target);
-              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "try-on") : ["wishlist", "profile"].includes(target) ? loginFor(`/?view=${target}`) || navigate(target) : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
+              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "style") : ["cart", "profile"].includes(target) ? loginFor(`/?view=${target}`) || navigate(target) : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
             })}
           </nav>
         )}

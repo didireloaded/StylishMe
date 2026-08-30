@@ -29,6 +29,10 @@ function loadWorker({ fetchImpl = fetch, matchImpl = async () => undefined } = {
   return listeners.fetch;
 }
 
+test("uses a fresh cache generation for the Arena application shell", () => {
+  assert.match(source, /stylishme-static-v3/);
+});
+
 test("does not intercept commerce API requests", () => {
   const fetchHandler = loadWorker();
   let responded = false;
@@ -76,4 +80,27 @@ test("falls back to the branded offline document for failed navigation", async (
     respondWith(value) { responsePromise = value; },
   });
   assert.equal(await responsePromise, offline);
+});
+
+test("fetches code and styles from the network before using cached copies", async () => {
+  const fresh = new Response("fresh", { status: 200 });
+  let fetches = 0;
+  const fetchHandler = loadWorker({
+    fetchImpl: async () => {
+      fetches += 1;
+      return fresh;
+    },
+  });
+  let responsePromise;
+  fetchHandler({
+    request: {
+      url: "https://stylishme.test/assets/app.js",
+      method: "GET",
+      mode: "cors",
+      destination: "script",
+    },
+    respondWith(value) { responsePromise = value; },
+  });
+  assert.equal(await responsePromise, fresh);
+  assert.equal(fetches, 1);
 });

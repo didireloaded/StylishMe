@@ -12,7 +12,9 @@ test("maps a normalized seller product into the customer Shop product model", as
     name: "Linen Set",
     description: "A relaxed linen set made in Windhoek.",
     category: "Clothing",
-    price: 1250,
+    price: 999,
+    oldPrice: 1250,
+    badge: "Limited Drop",
     images: ["/api/seller-images/linen.webp"],
     material: "Linen",
     fit: "Relaxed",
@@ -31,6 +33,9 @@ test("maps a normalized seller product into the customer Shop product model", as
   assert.deepEqual(product.sizes, ["M", "L"]);
   assert.deepEqual(product.stock, [3, 4]);
   assert.equal(product.pickup, true);
+  assert.equal(product.price, 999);
+  assert.equal(product.oldPrice, 1250);
+  assert.equal(product.badge, "Limited Drop");
 });
 
 test("customer Shop loads and merges published seller products without replacing launch inventory", async () => {

@@ -21,10 +21,12 @@ test("contains the complete StylishMe shopping journey", async () => {
   assert.deepEqual(mainTabs, [
     ["Home", "home", "home"],
     ["Shop", "shop", "shop"],
-    ["Wishlist", "wishlist", "heart"],
+    ["Designers", "stores", "designer"],
+    ["Style Me", "try-on", "sparkles"],
+    ["Cart", "cart", "bag"],
     ["Profile", "profile", "profile"],
   ]);
-  assert.doesNotMatch(tabsSource[1], /"Cart", "cart"/);
+  assert.doesNotMatch(tabsSource[1], /"Wishlist", "wishlist"/);
   assert.match(app, /aria-label=\{`Open cart, \$\{cartCount\} items`\}/);
   assert.match(app, /\["Saved outfits", "outfits"\]/i);
   assert.match(app, /Add to cart ·/);
@@ -57,7 +59,7 @@ test("returns products to their origin and marks profile destinations current", 
   assert.match(app, /onOpenProduct=\{\(id\) => openProduct\(id, "outfits"\)\}/);
   assert.match(app, /header\("Wishlist"\)/);
   assert.match(app, /const profileViews: View\[\] = \["profile", "wardrobe", "orders", "tracking", "addresses", "notifications", "support", "settings"\]/);
-  assert.match(app, /const isMainTabActive = \(target: View\) =>[\s\S]*?target === view[\s\S]*?target === "home" && view === "designer"[\s\S]*?target === "profile" && profileViews\.includes\(view\)/);
+  assert.match(app, /const isMainTabActive = \(target: View\) =>[\s\S]*?target === view[\s\S]*?target === "stores" && view === "designer"[\s\S]*?target === "profile" && profileViews\.includes\(view\)/);
   assert.match(app, /aria-current=\{active \? "page" : undefined\}/);
 });
 
@@ -71,6 +73,8 @@ test("disables outfit bulk add when every item is unavailable", async () => {
   assert.match(outfitsView, /disabled=\{!availableCount\}/);
   assert.match(outfitsView, /availableCount \? "Add All to Cart" : "All items unavailable"/);
   assert.match(outfitsView, /!product\.available && <b>Unavailable<\/b>/);
+  assert.match(outfitsView, /!focused && <button className="outfit-replace"/);
+  assert.match(outfitsView, /!focused && <button\s*className=\{`outline-button/);
   assert.match(css, /\.outfit-actions \.gradient-button:disabled/);
 });
 

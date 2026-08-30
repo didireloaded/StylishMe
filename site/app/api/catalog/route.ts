@@ -9,10 +9,13 @@ type PublicMetadata = {
   images?: string[];
   colours?: string[];
   collection?: string;
+  oldPrice?: number;
+  badge?: string;
   material?: string;
   fit?: string;
   delivery?: string[];
   returns?: string;
+  madeToOrder?: boolean;
   store?: { name?: string; type?: string; city?: string; story?: string };
 };
 
@@ -59,10 +62,13 @@ export async function GET(request: Request) {
           description: row.description,
           category: row.category,
           collection: meta.collection ?? "",
+          oldPrice: meta.oldPrice,
+          badge: meta.badge ?? "",
           material: meta.material ?? "",
           fit: meta.fit ?? "",
           delivery: meta.delivery ?? [],
           returns: meta.returns ?? "",
+          madeToOrder: meta.madeToOrder === true,
           price: row.priceCents / 100,
           priceCents: row.priceCents,
           images: Array.isArray(meta.images) && meta.images.length ? meta.images : [row.imageUrl],
