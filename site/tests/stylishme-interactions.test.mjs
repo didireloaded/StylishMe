@@ -138,15 +138,11 @@ test("Designer catalogue keeps the Shop tab active when opened from Shop", async
 test("Primary navigation is shop-first and the cart stays in the header", async () => {
   await renderApp();
   const navigation = within(screen.getByRole("navigation"));
-  for (const name of ["Home", "Shop", "Stores", "Try On", "Wishlist", "Profile"]) {
+  for (const name of ["Home", "Shop", "Wishlist", "Profile"]) {
     assert.ok(navigation.getByRole("button", { name }));
   }
   assert.equal(navigation.queryByRole("button", { name: /Cart/ }), null);
   assert.ok(screen.getByRole("button", { name: "Open cart, 0 items" }));
-
-  fireEvent.click(navigation.getByRole("button", { name: "Try On" }));
-  assert.ok(screen.getByRole("heading", { name: "Try On" }));
-  assert.ok(screen.getByText(/See how a look could appear on you/));
 
   openMainTab("Shop");
   fireEvent.click(screen.getByRole("button", { name: "Open Oversized Coral Hoodie" }));
@@ -178,7 +174,7 @@ test("Home stays editorial while Shop owns practical catalogue discovery", async
   assert.equal(screen.queryByRole("heading", { name: "Recently viewed" }), null);
 
   fireEvent.click(screen.getByRole("button", { name: "Try an Outfit" }));
-  assert.equal(within(screen.getByRole("navigation")).getByRole("button", { name: "Try On" }).getAttribute("aria-current"), "page");
+  assert.ok(screen.getByRole("heading", { name: "Try On" }));
 
   openMainTab("Shop");
   assert.ok(screen.getByRole("heading", { name: "Shop by category" }));
@@ -261,7 +257,7 @@ test("product and curated-look entry points start try-on with real catalogue pie
   openMainTab("Shop");
   fireEvent.click(screen.getByRole("button", { name: "Open Oversized Coral Hoodie" }));
   fireEvent.click(screen.getByRole("button", { name: "Try On this piece" }));
-  assert.equal(within(screen.getByRole("navigation")).getByRole("button", { name: "Try On" }).getAttribute("aria-current"), "page");
+  assert.ok(screen.getByRole("heading", { name: "Try On" }));
 
   openMainTab("Home");
   fireEvent.click(screen.getByRole("button", { name: "See the outfit" }));

@@ -810,12 +810,20 @@ export default function StylishMeApp({
 
   let content: React.ReactNode;
   if (view === "home") content = <>
-    <header className="brand-header"><h1>STYLISHME</h1><div><button onClick={openStoryComposer} className="circle-btn post-outfit-button" aria-label="Post an outfit"><Icon name="plus" /></button><button onClick={() => navigate("search")} className="circle-btn" aria-label="Search"><Icon name="search" /></button><button onClick={() => navigate("notifications")} className="circle-btn" aria-label="Notifications"><Icon name="bell" /></button>{cartButton()}</div></header>
+    <section className="reference-welcome" aria-label="StylishMe welcome">
+      <header className="brand-header"><div><small>WELCOME</small><h1>{user?.name ?? "STYLISHME"}</h1></div><button onClick={() => navigate("profile")} className="reference-menu" aria-label="Open profile"><span /><span /><span /></button></header>
+      <div className="reference-stats-capsule">
+        <div className="reference-avatar">{user?.avatarUrl ? <img src={user.avatarUrl} alt="" /> : "S"}</div>
+        <strong>{followedDesigners.length}<small>Following</small></strong>
+        <strong>{wishlist.length}<small>Saved</small></strong>
+        <strong>{orders.length}<small>Orders</small></strong>
+      </div>
+    </section>
+    <div className="reference-utility-row" aria-label="Quick actions"><button onClick={openStoryComposer} className="circle-btn post-outfit-button" aria-label="Post an outfit"><Icon name="plus" /></button><button onClick={() => navigate("search")} className="circle-btn" aria-label="Search"><Icon name="search" /></button><button onClick={() => navigate("notifications")} className="circle-btn" aria-label="Notifications"><Icon name="bell" /></button>{cartButton()}</div>
     <button className="home-search" onClick={() => navigate("search")}><Icon name="search" /><span>Search products, stores and designers</span></button>
-    <section className="editorial-hero" aria-labelledby="home-editorial-title">
-      <small>STYLISHME NAMIBIA</small>
-      <h2 id="home-editorial-title">Find the look.<span>Wear the moment.</span></h2>
-      <p>Local designers, complete outfits and pieces you can try before choosing your size.</p>
+    <section className="reference-feed-heading" aria-labelledby="home-editorial-title">
+      <h2 id="home-editorial-title">FOR YOU</h2>
+      <div className="reference-category-links" aria-label="Shop categories">{["Men", "Women", "Kids"].map(item => <button key={item} onClick={() => { setCategory(item); navigate("shop"); }}>{item}</button>)}</div>
     </section>
     <section className="story-row outfit-story-row" aria-label="Outfit stories">
       {user && eligibleStoryItems.length > 0 && <article className="story-identity customer-story-identity">
@@ -1084,8 +1092,6 @@ export default function StylishMeApp({
   const mainTabs: Array<[string, View, string]> = [
     ["Home", "home", "home"],
     ["Shop", "shop", "shop"],
-    ["Stores", "stores", "shop"],
-    ["Try On", "try-on", "sparkles"],
     ["Wishlist", "wishlist", "heart"],
     ["Profile", "profile", "profile"],
   ];
@@ -1102,7 +1108,7 @@ export default function StylishMeApp({
   return (
     <main className={`site-stage ${dataLight ? "data-light" : ""}`}>
       <div
-        className="app-shell"
+        className={`app-shell reference-customer-shell view-${view}`}
         inert={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen}
         aria-hidden={activeStoryId !== null || activeCustomerStory !== null || storyComposerOpen ? true : undefined}
       >

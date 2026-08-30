@@ -21,8 +21,6 @@ test("contains the complete StylishMe shopping journey", async () => {
   assert.deepEqual(mainTabs, [
     ["Home", "home", "home"],
     ["Shop", "shop", "shop"],
-    ["Stores", "stores", "shop"],
-    ["Try On", "try-on", "sparkles"],
     ["Wishlist", "wishlist", "heart"],
     ["Profile", "profile", "profile"],
   ]);
@@ -103,9 +101,10 @@ test("ships the premium mobile design and social card", async () => {
     stat(new URL("public/og.png", root)),
   ]);
 
-  assert.match(css, /grid-template-columns:\s*repeat\(6, 1fr\)/);
-  assert.match(css, /linear-gradient\(105deg, #c270d5/);
+  assert.match(css, /grid-template-columns:\s*repeat\(4, 1fr\)/);
+  assert.match(css, /--ref-yellow:\s*#f2bc2c/);
   assert.match(css, /\.screen-content\s*\{[^}]*width:\s*min\(100%, 960px\)/s);
+  assert.match(css, /\.reference-customer-shell\s*\{[^}]*width:\s*min\(100%, 430px\)/s);
   assert.match(css, /\.product-grid/);
   assert.match(css, /\.product-hero/);
   assert.match(layout, /StylishMe — Fashion from Namibia/);
@@ -201,7 +200,7 @@ test("renders a borderless app shell without a fake device status bar", async ()
 
   assert.doesNotMatch(app, /className="phone-shell"/);
   assert.doesNotMatch(app, /className="status-bar"/);
-  assert.match(app, /className="app-shell"/);
+  assert.match(app, /reference-customer-shell/);
   assert.match(css, /min-height:\s*100dvh/);
   assert.match(css, /env\(safe-area-inset-top\)/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
