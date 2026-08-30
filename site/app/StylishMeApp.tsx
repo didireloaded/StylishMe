@@ -493,7 +493,18 @@ export default function StylishMeApp({
     setView("product");
   }, [productById]);
 
-  const navigate = (next: View) => { setView(next); setFiltersOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const navigate = (next: View) => {
+    setView(next);
+    setFiltersOpen(false);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      ["payment", "order", "product", "story"].forEach((key) => url.searchParams.delete(key));
+      if (next === "home") url.searchParams.delete("view");
+      else url.searchParams.set("view", next);
+      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const trackActivity = (event: string, targetType?: string, targetId?: string) => {
     if (demoMode) return;
     void fetch("/api/activity", {
@@ -521,6 +532,9 @@ export default function StylishMeApp({
     setSelectedColor(p.colors[0]);
     setSelectedProductImage(p.image);
     navigate("product");
+    const url = new URL(window.location.href);
+    url.searchParams.set("product", id);
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   };
   const openOutfit = (id: string, focused = false) => { trackActivity("outfit_viewed", "outfit", id); setSavedOutfitMode(false); setFocusedOutfitId(focused ? id : null); setSelectedOutfitId(id); setActiveStoryId(null); navigate("outfits"); };
   const openSavedOutfits = () => {
