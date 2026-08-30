@@ -3,12 +3,13 @@ import { headers } from "next/headers";
 import { PwaRegistration } from "./PwaRegistration";
 import "./globals.css";
 import "./seller.css";
+import "./arena.css";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b1218",
+  themeColor: "#1c1c1e",
 };
 
 export async function generateMetadata(): Promise<Metadata> {

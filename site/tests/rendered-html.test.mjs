@@ -95,8 +95,9 @@ test("persists customer state through the configured D1 backend", async () => {
 });
 
 test("ships the premium mobile design and social card", async () => {
-  const [css, layout, image] = await Promise.all([
+  const [css, arena, layout, image] = await Promise.all([
     read("app/globals.css"),
+    read("app/arena.css"),
     read("app/layout.tsx"),
     stat(new URL("public/og.png", root)),
   ]);
@@ -107,6 +108,14 @@ test("ships the premium mobile design and social card", async () => {
   assert.match(css, /\.reference-customer-shell\s*\{[^}]*width:\s*min\(100%, 430px\)/s);
   assert.match(css, /\.product-grid/);
   assert.match(css, /\.product-hero/);
+  assert.match(arena, /--arena-bg:\s*#1c1c1e/);
+  assert.match(arena, /--arena-surface:\s*#2c2c2e/);
+  assert.match(arena, /--arena-accent:\s*#f5b800/);
+  assert.match(arena, /\.reference-customer-shell/);
+  assert.match(arena, /\.seller-app/);
+  assert.match(arena, /\.auth-shell/);
+  assert.match(arena, /\.demo-shell/);
+  assert.match(layout, /import "\.\/arena\.css"/);
   assert.match(layout, /StylishMe — Fashion from Namibia/);
   assert.match(layout, /images: \[\{ url: `\$\{origin\}\/og\.png`/);
   assert.ok(image.size > 100_000, "social card should be a real production image");
