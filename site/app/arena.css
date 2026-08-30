@@ -57,7 +57,10 @@ select:focus-visible {
 
 /* Customer shell */
 .site-stage {
+  display: flex;
   min-height: 100dvh;
+  justify-content: center;
+  overflow-x: hidden;
   background: var(--arena-black);
 }
 
@@ -68,7 +71,9 @@ select:focus-visible {
   --ref-white: var(--arena-surface);
   --ref-charcoal: var(--arena-bg);
   --ref-yellow: var(--arena-accent);
-  width: min(100%, 430px);
+  width: 100%;
+  max-width: 430px;
+  min-width: 0;
   min-height: 100dvh;
   margin: 0 auto;
   color: var(--arena-text);
@@ -79,6 +84,7 @@ select:focus-visible {
 .reference-customer-shell .screen-content {
   width: 100%;
   max-width: 430px;
+  min-width: 0;
   min-height: 100dvh;
   padding: max(14px, env(safe-area-inset-top)) 18px calc(112px + env(safe-area-inset-bottom));
   color: var(--arena-text);
@@ -609,6 +615,154 @@ select:focus-visible {
   box-shadow: none;
 }
 
+.reference-customer-shell .shop-discovery {
+  display: grid;
+  gap: 28px;
+  margin: 8px 0 30px;
+  padding: 0;
+  color: var(--arena-text);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.reference-customer-shell .shop-secondary-discovery {
+  display: grid;
+  gap: 30px;
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid var(--arena-line);
+}
+
+.reference-customer-shell .shop-discovery > div {
+  min-width: 0;
+}
+
+.reference-customer-shell.view-shop .seller-lanes,
+.reference-customer-shell.view-shop .designer-lookbooks,
+.reference-customer-shell.view-shop .shop-shortcuts {
+  display: block;
+}
+
+.reference-customer-shell .category-edit-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.reference-customer-shell .category-edit-grid button {
+  aspect-ratio: 0.78;
+  color: var(--arena-text);
+  background: var(--arena-surface);
+  border: 1px solid var(--arena-line);
+  border-radius: var(--arena-radius-sm);
+}
+
+.reference-customer-shell .category-edit-grid button[aria-pressed="true"] {
+  border-color: var(--arena-accent);
+  box-shadow: 0 0 0 2px rgba(245, 184, 0, 0.18);
+}
+
+.reference-customer-shell .category-edit-grid button::after {
+  background: linear-gradient(transparent, rgba(18, 18, 20, 0.94));
+}
+
+.reference-customer-shell .seller-lane-grid {
+  display: grid;
+  grid-auto-columns: 78%;
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.reference-customer-shell .seller-lane-grid > button {
+  min-height: 190px;
+  scroll-snap-align: start;
+  background: var(--arena-surface);
+  border-color: var(--arena-line);
+  border-radius: var(--arena-radius-md);
+}
+
+.reference-customer-shell .seller-lane-grid img {
+  opacity: 0.56;
+}
+
+.reference-customer-shell .seller-lane-grid span {
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+}
+
+.reference-customer-shell .seller-lane-grid strong {
+  color: var(--arena-text);
+  font-size: 17px;
+}
+
+.reference-customer-shell .seller-lane-grid small {
+  color: #d1d1d6;
+}
+
+.reference-customer-shell .seller-lane-grid b,
+.reference-customer-shell .lookbook-row b,
+.reference-customer-shell .shop-shortcuts b {
+  color: var(--arena-accent);
+}
+
+.reference-customer-shell .lookbook-row {
+  grid-auto-columns: 82%;
+  gap: 10px;
+}
+
+.reference-customer-shell .lookbook-row > button {
+  grid-template-columns: 112px 1fr;
+  min-height: 132px;
+  color: var(--arena-text);
+  background: var(--arena-surface);
+  border-color: var(--arena-line);
+  border-radius: var(--arena-radius-md);
+}
+
+.reference-customer-shell .lookbook-row img {
+  width: 112px;
+}
+
+.reference-customer-shell .lookbook-row strong {
+  color: var(--arena-text);
+  font-family: inherit;
+  font-weight: 750;
+}
+
+.reference-customer-shell .shop-shortcuts {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  background: var(--arena-surface);
+  border: 1px solid var(--arena-line);
+  border-radius: var(--arena-radius-md);
+}
+
+.reference-customer-shell .shop-shortcuts button {
+  min-height: 62px;
+  color: var(--arena-text);
+  border-bottom: 1px solid var(--arena-line);
+}
+
+.reference-customer-shell .shop-shortcuts button + button {
+  border-left: 0;
+}
+
+.reference-customer-shell .shop-shortcuts button:last-child {
+  border-bottom: 0;
+}
+
+.reference-customer-shell .shop-shortcuts small {
+  color: var(--arena-muted);
+}
+
 .reference-customer-shell .home-look-tile small,
 .reference-customer-shell .home-designer-card small,
 .reference-customer-shell .seller-lane-grid small,
@@ -993,6 +1147,22 @@ select:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   width: 100%;
   margin-top: 18px;
+  color: var(--arena-text);
+  background: var(--arena-surface);
+  border-color: var(--arena-line);
+}
+
+.reference-customer-shell .profile-stats-bar strong {
+  color: var(--arena-text);
+}
+
+.reference-customer-shell .profile-stats-bar small {
+  color: var(--arena-muted);
+}
+
+.reference-customer-shell .profile-head > .gradient-button {
+  color: var(--arena-bg);
+  background: var(--arena-accent);
 }
 
 .reference-customer-shell .profile-menu {

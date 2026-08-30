@@ -920,6 +920,15 @@ export default function StylishMeApp({
           {["Women", "Men", "Shoes", "Accessories"].map((item, index) => <button key={item} aria-pressed={category === item} onClick={() => setCategory(item)}><img src={products[[2, 5, 1, 8][index]].image} alt="" /><span>{item}</span></button>)}
         </div>
       </div>
+    </section>}
+    <div className="chip-row">{shopCategories.map(item => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
+    {activeFilterCount > 0 && <div className="active-filter-row" aria-label="Active filters">
+      {Object.entries(shopFilters).flatMap(([key, value]) => value === DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState] ? [] : [<button key={key} onClick={() => setShopFilters((current) => ({ ...current, [key]: DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState] }))}>{value}<span>×</span></button>])}
+      <button className="clear-filters" onClick={resetShopFilters}>Clear all</button>
+    </div>}
+    <div className="result-line"><span><b>{filtered.length} {filtered.length === 1 ? "piece" : "pieces"}</b>{shopFilters.location !== DEFAULT_SHOP_FILTERS.location ? ` · ${shopFilters.location}` : ""}</span><button onClick={() => setFiltersOpen(true)}>Sort &amp; filter · {sort}</button></div>
+    {filtered.length ? grid(filtered) : <div className="empty"><h2>0 pieces found</h2><p>Try a broader search or clear your filters.</p><button onClick={clearShopDiscovery} className="gradient-button">Clear all filters</button></div>}
+    {view === "shop" && <section className="shop-secondary-discovery" aria-label="More ways to shop">
       <div className="seller-lanes">
         <div className="section-title"><h2>Explore sellers</h2><small>Enter a dedicated seller destination</small></div>
         <div className="seller-lane-grid">
@@ -940,13 +949,6 @@ export default function StylishMeApp({
         <button onClick={() => openProduct(selectedId)}><span>Recently viewed</span><small>{selected.name}</small><b>→</b></button>
       </nav>
     </section>}
-    <div className="chip-row">{shopCategories.map(item => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}</div>
-    {activeFilterCount > 0 && <div className="active-filter-row" aria-label="Active filters">
-      {Object.entries(shopFilters).flatMap(([key, value]) => value === DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState] ? [] : [<button key={key} onClick={() => setShopFilters((current) => ({ ...current, [key]: DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState] }))}>{value}<span>×</span></button>])}
-      <button className="clear-filters" onClick={resetShopFilters}>Clear all</button>
-    </div>}
-    <div className="result-line"><span><b>{filtered.length} {filtered.length === 1 ? "piece" : "pieces"}</b>{shopFilters.location !== DEFAULT_SHOP_FILTERS.location ? ` · ${shopFilters.location}` : ""}</span><button onClick={() => setFiltersOpen(true)}>Sort &amp; filter · {sort}</button></div>
-    {filtered.length ? grid(filtered) : <div className="empty"><h2>0 pieces found</h2><p>Try a broader search or clear your filters.</p><button onClick={clearShopDiscovery} className="gradient-button">Clear all filters</button></div>}
   </>;
   else if (view === "stores") {
     const visibleStores = seededDesignerNames.filter((name) =>
