@@ -806,7 +806,7 @@ export default function StylishMeApp({
   const activeFilterCount = Object.entries(shopFilters)
     .filter(([key, value]) => value !== DEFAULT_SHOP_FILTERS[key as keyof ShopFilterState]).length;
 
-  const cartButton = () => <button className="circle-btn" onClick={() => { if (!loginFor("/?view=cart")) navigate("cart"); }} aria-label={`Open cart, ${cartCount} items`}><Icon name="bag" />{cartCount ? <i>{cartCount}</i> : null}</button>;
+  const cartButton = () => <button className="circle-btn" onClick={() => navigate("cart")} aria-label={`Open cart, ${cartCount} items`}><Icon name="bag" />{cartCount ? <i>{cartCount}</i> : null}</button>;
   const openStoryComposer = () => {
     if (!user) { window.location.href = "/login?returnTo=/"; return; }
     if (!eligibleStoryItems.length) { setToast("Share an outfit after an order is delivered or collected"); navigate("orders"); return; }
@@ -1128,7 +1128,7 @@ export default function StylishMeApp({
           <nav className="bottom-nav">
             {mainTabs.map(([label, target, icon]) => {
               const active = isMainTabActive(target);
-              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "style") : ["cart", "profile"].includes(target) ? loginFor(`/?view=${target}`) || navigate(target) : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
+              return <button key={target} onClick={() => target === "try-on" ? startTryOn([selected.id], "style") : navigate(target)} className={active ? "active" : ""} aria-current={active ? "page" : undefined}><i><Icon name={icon} /></i><span>{label}</span></button>;
             })}
           </nav>
         )}

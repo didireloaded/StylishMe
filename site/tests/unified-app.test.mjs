@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
 const root = new URL("../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
@@ -46,6 +46,12 @@ test("guest browsing remains visible while shopping actions require login", asyn
 
   render(React.createElement(StylishMeApp, { user: null }));
   assert.ok(await screen.findByRole("heading", { name: "STYLISHME" }));
+  const navigation = within(screen.getByRole("navigation"));
+  fireEvent.click(navigation.getByRole("button", { name: "Profile" }));
+  assert.ok(within(screen.getByRole("banner")).getByText("Profile"));
+  assert.ok(screen.getByRole("button", { name: "Sign in to StylishMe" }));
+  fireEvent.click(navigation.getByRole("button", { name: "Cart" }));
+  assert.ok(within(screen.getByRole("banner")).getByText("My Cart"));
   assert.match(app, /window\.location\.href = `\/login\?returnTo=\$\{encodeURIComponent\(returnTo\)\}`/);
   assert.match(app, /if \(loginFor\(window\.location\.pathname \+ window\.location\.search\)\) return;/);
   assert.match(app, /if \(loginFor\(`\/\?view=product&product=\$\{product\.id\}`\)\) return;/);
