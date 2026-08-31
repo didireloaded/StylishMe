@@ -31,6 +31,7 @@ function openMainTab(name) {
 
 beforeEach(() => {
   localStorage.clear();
+  window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
 });
 

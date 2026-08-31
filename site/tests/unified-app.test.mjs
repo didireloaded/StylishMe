@@ -38,6 +38,7 @@ test("guest browsing remains visible while shopping actions require login", asyn
   const { default: StylishMeApp } = await import("../app/StylishMeApp.tsx");
   const app = await read("app/StylishMeApp.tsx");
   localStorage.clear();
+  window.history.replaceState({}, "", "/");
   globalThis.fetch = async (url) => ({
     ok: String(url).includes("/api/catalog") || String(url).includes("/api/customer-stories") || String(url).includes("/api/discovery"),
     status: String(url).includes("/api/state") ? 401 : 200,
@@ -50,8 +51,10 @@ test("guest browsing remains visible while shopping actions require login", asyn
   fireEvent.click(navigation.getByRole("button", { name: "Profile" }));
   assert.ok(within(screen.getByRole("banner")).getByText("Profile"));
   assert.ok(screen.getByRole("button", { name: "Sign in to StylishMe" }));
+  assert.equal(window.location.search, "?view=profile");
   fireEvent.click(navigation.getByRole("button", { name: "Cart" }));
   assert.ok(within(screen.getByRole("banner")).getByText("My Cart"));
+  assert.equal(window.location.search, "?view=cart");
   assert.match(app, /window\.location\.href = `\/login\?returnTo=\$\{encodeURIComponent\(returnTo\)\}`/);
   assert.match(app, /if \(loginFor\(window\.location\.pathname \+ window\.location\.search\)\) return;/);
   assert.match(app, /if \(loginFor\(`\/\?view=product&product=\$\{product\.id\}`\)\) return;/);

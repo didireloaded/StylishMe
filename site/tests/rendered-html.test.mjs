@@ -54,7 +54,7 @@ test("returns products to their origin and marks profile destinations current", 
   const app = await read("app/StylishMeApp.tsx");
 
   assert.match(app, /const \[productReturnView, setProductReturnView\] = useState<View>\("shop"\)/);
-  assert.match(app, /const openProduct = \(id: string, returnView: View = view\) => \{[\s\S]*?setProductReturnView\(returnView\);[\s\S]*?navigate\("product"\);\s*\};/);
+  assert.match(app, /const openProduct = \(id: string, returnView: View = view\) => \{[\s\S]*?setProductReturnView\(returnView\);[\s\S]*?navigate\("product"\);[\s\S]*?url\.searchParams\.set\("product", id\);[\s\S]*?\};/);
   assert.match(app, /onClick=\{\(\) => navigate\(productReturnView\)\}[^>]*aria-label="Go back"/);
   assert.match(app, /onOpenProduct=\{\(id\) => openProduct\(id, "outfits"\)\}/);
   assert.match(app, /header\("Wishlist"\)/);
